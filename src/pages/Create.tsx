@@ -1,166 +1,145 @@
 
+import { Plus, Upload, Zap } from "lucide-react";
 import { useState } from "react";
-import { Upload, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Create = () => {
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
+  const [totalSupply, setTotalSupply] = useState("");
   const [description, setDescription] = useState("");
-  const [website, setWebsite] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [telegram, setTelegram] = useState("");
+  const [selectedChain, setSelectedChain] = useState("");
+
+  const chains = [
+    { id: "sepolia", name: "Sepolia", fee: "0.001 ETH" },
+    { id: "risechain", name: "RiseChain", fee: "0.0005 RISE" },
+    { id: "megaeth", name: "MegaETH", fee: "0.0003 MEGA" },
+    { id: "pharos", name: "Pharos", fee: "0.0008 PHAR" },
+  ];
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <Card className="trading-card">
-        <CardHeader>
-          <CardTitle className="text-text-primary">Create New Token</CardTitle>
-          <p className="text-text-secondary">
-            Deploy your token with bonding curve mechanics for fair price discovery
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Logo Upload */}
-          <div className="space-y-2">
-            <Label className="text-text-primary">Token Logo</Label>
-            <div className="border-2 border-dashed border-bg-tertiary rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-              <ImageIcon size={40} className="mx-auto text-text-secondary mb-4" />
-              <p className="text-text-secondary mb-2">Click to upload or drag and drop</p>
-              <p className="text-text-muted text-sm">PNG, JPG, GIF up to 10MB</p>
-            </div>
+    <div className="container mx-auto px-4 py-6 max-w-lg">
+      <div className="trading-card">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-10 h-10 bg-success rounded-lg flex items-center justify-center">
+            <Plus size={20} className="text-white" />
           </div>
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">Create Token</h1>
+            <p className="text-text-secondary">Deploy your own token on any chain</p>
+          </div>
+        </div>
 
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-6">
+          {/* Token Details */}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-text-primary">Token Name</Label>
+              <label className="text-sm font-medium text-text-primary">Token Name</label>
               <Input
-                id="name"
-                placeholder="e.g., Moon Token"
+                placeholder="e.g., My Amazing Token"
                 value={tokenName}
                 onChange={(e) => setTokenName(e.target.value)}
-                className="bg-bg-tertiary border-bg-tertiary text-text-primary"
+                className="bg-bg-tertiary border-bg-tertiary"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="symbol" className="text-text-primary">Token Symbol</Label>
+              <label className="text-sm font-medium text-text-primary">Token Symbol</label>
               <Input
-                id="symbol"
-                placeholder="e.g., MOON"
+                placeholder="e.g., MAT"
                 value={tokenSymbol}
                 onChange={(e) => setTokenSymbol(e.target.value.toUpperCase())}
-                className="bg-bg-tertiary border-bg-tertiary text-text-primary"
+                className="bg-bg-tertiary border-bg-tertiary"
+                maxLength={10}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text-primary">Total Supply</label>
+              <Input
+                placeholder="e.g., 1000000"
+                value={totalSupply}
+                onChange={(e) => setTotalSupply(e.target.value)}
+                className="bg-bg-tertiary border-bg-tertiary"
+                type="number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text-primary">Description (Optional)</label>
+              <Textarea
+                placeholder="Describe your token..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="bg-bg-tertiary border-bg-tertiary min-h-20"
               />
             </div>
           </div>
 
-          {/* Description */}
+          {/* Chain Selection */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-text-primary">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe your token and its purpose..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="bg-bg-tertiary border-bg-tertiary text-text-primary min-h-[100px]"
-            />
+            <label className="text-sm font-medium text-text-primary">Select Chain</label>
+            <Select value={selectedChain} onValueChange={setSelectedChain}>
+              <SelectTrigger className="bg-bg-tertiary border-bg-tertiary">
+                <SelectValue placeholder="Choose deployment chain" />
+              </SelectTrigger>
+              <SelectContent className="bg-bg-secondary border-bg-tertiary">
+                {chains.map((chain) => (
+                  <SelectItem key={chain.id} value={chain.id}>
+                    <div className="flex justify-between w-full">
+                      <span>{chain.name}</span>
+                      <span className="text-text-muted ml-4">{chain.fee}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Social Links */}
-          <div className="space-y-4">
-            <h4 className="text-text-primary font-medium">Social Links (Optional)</h4>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="website" className="text-text-primary">Website</Label>
-                <Input
-                  id="website"
-                  placeholder="https://yourtoken.com"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  className="bg-bg-tertiary border-bg-tertiary text-text-primary"
-                />
+          {/* Token Features */}
+          <div className="bg-bg-tertiary rounded-lg p-4">
+            <h3 className="text-sm font-medium text-text-primary mb-3">Token Features</h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary">Mintable</span>
+                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">Included</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="twitter" className="text-text-primary">Twitter</Label>
-                <Input
-                  id="twitter"
-                  placeholder="@yourtoken"
-                  value={twitter}
-                  onChange={(e) => setTwitter(e.target.value)}
-                  className="bg-bg-tertiary border-bg-tertiary text-text-primary"
-                />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary">Burnable</span>
+                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">Included</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="telegram" className="text-text-primary">Telegram</Label>
-                <Input
-                  id="telegram"
-                  placeholder="https://t.me/yourtoken"
-                  value={telegram}
-                  onChange={(e) => setTelegram(e.target.value)}
-                  className="bg-bg-tertiary border-bg-tertiary text-text-primary"
-                />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-secondary">Pausable</span>
+                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">Included</span>
               </div>
             </div>
           </div>
 
-          {/* Bonding Curve Configuration */}
-          <div className="bg-bg-tertiary rounded-lg p-4 space-y-4">
-            <h4 className="text-text-primary font-medium">Bonding Curve Settings</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-text-primary">Initial Price</Label>
-                <Input
-                  placeholder="0.001"
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                />
+          {/* Cost Estimation */}
+          {selectedChain && (
+            <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <Zap size={16} className="text-warning" />
+                <span className="text-sm font-medium text-text-primary">Deployment Cost</span>
               </div>
-              <div className="space-y-2">
-                <Label className="text-text-primary">Price Increment</Label>
-                <Input
-                  placeholder="0.0001"
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                />
+              <div className="text-sm text-text-secondary">
+                Estimated fee: {chains.find(c => c.id === selectedChain)?.fee}
               </div>
             </div>
-            <p className="text-text-muted text-sm">
-              Price automatically increases with each purchase following the bonding curve formula
-            </p>
-          </div>
+          )}
 
-          {/* Deployment Cost */}
-          <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
-            <h4 className="text-text-primary font-medium mb-2">Deployment Cost</h4>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Contract Deployment:</span>
-                <span className="text-text-primary">0.05 ETH</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Initial Liquidity:</span>
-                <span className="text-text-primary">0.1 ETH</span>
-              </div>
-              <div className="flex justify-between font-medium">
-                <span className="text-text-primary">Total:</span>
-                <span className="text-warning">0.15 ETH (~$280)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Deploy Button */}
-          <Button
-            className="w-full button-primary"
-            disabled={!tokenName || !tokenSymbol}
+          <Button 
+            className="w-full button-primary" 
+            size="lg"
+            disabled={!tokenName || !tokenSymbol || !totalSupply || !selectedChain}
           >
-            <Upload size={16} className="mr-2" />
-            Deploy Token
+            Create Token
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
