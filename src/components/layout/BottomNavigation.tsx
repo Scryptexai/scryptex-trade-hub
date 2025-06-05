@@ -1,5 +1,5 @@
 
-import { Home, ArrowUpDown, Plus, Sun, bridge } from "lucide-react";
+import { Home, ArrowUpDown, Plus, Sun, ArrowLeftRight } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ const navItems = [
   },
   {
     path: "/bridge",
-    icon: bridge,
+    icon: ArrowLeftRight,
     label: "Bridge",
   },
 ];
