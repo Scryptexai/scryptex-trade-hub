@@ -1,110 +1,195 @@
 
-import { Sun, Moon, Coffee, Heart, Users, Zap } from "lucide-react";
 import { useState } from "react";
+import { Sun, Send, Heart, MessageCircle, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+const gmPosts = [
+  {
+    id: 1,
+    user: "CryptoTrader",
+    message: "GM everyone! Ready for another day of building on @RiseChain 🚀",
+    time: "5 minutes ago",
+    chain: "RiseChain",
+    likes: 12,
+    comments: 3,
+    streak: 45,
+  },
+  {
+    id: 2,
+    user: "DeFiBuilder",
+    message: "GM! Just deployed my first token on SCRYPTEX. The bonding curve system is amazing! 🌟",
+    time: "12 minutes ago",
+    chain: "Sepolia",
+    likes: 8,
+    comments: 2,
+    streak: 23,
+  },
+  {
+    id: 3,
+    user: "MoonFarmer",
+    message: "GM fam! Who else is farming STEX points today? 📈",
+    time: "1 hour ago",
+    chain: "MegaETH",
+    likes: 15,
+    comments: 5,
+    streak: 67,
+  },
+];
+
+const leaderboard = [
+  { rank: 1, user: "CryptoWhale", streak: 89, points: 4250 },
+  { rank: 2, user: "DeFiLegend", streak: 78, points: 3890 },
+  { rank: 3, user: "TokenMaster", streak: 67, points: 3350 },
+  { rank: 4, user: "MoonFarmer", streak: 67, points: 3200 },
+  { rank: 5, user: "ChainBuilder", streak: 56, points: 2800 },
+];
 
 const GM = () => {
-  const [hasGreeted, setHasGreeted] = useState(false);
-  const [greetingCount, setGreetingCount] = useState(1247);
-
-  const handleGreeting = () => {
-    if (!hasGreeted) {
-      setHasGreeted(true);
-      setGreetingCount(prev => prev + 1);
-    }
-  };
-
-  const timeOfDay = new Date().getHours();
-  const greeting = timeOfDay < 12 ? "GM" : timeOfDay < 18 ? "GA" : "GN";
-  const icon = timeOfDay < 12 ? Sun : timeOfDay < 18 ? Coffee : Moon;
-  const IconComponent = icon;
+  const [gmMessage, setGmMessage] = useState("");
+  const [selectedChain, setSelectedChain] = useState("All Chains");
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-md">
-      <div className="trading-card text-center">
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center mx-auto mb-4">
-            <IconComponent size={32} className="text-white" />
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* GM Posting */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="trading-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-text-primary">
+                <Sun className="text-warning" size={24} />
+                <span>Good Morning!</span>
+              </CardTitle>
+              <p className="text-text-secondary">
+                Share your daily GM and earn 10 STEX points. Keep your streak alive for bonus rewards!
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="GM everyone! What are you building today?"
+                value={gmMessage}
+                onChange={(e) => setGmMessage(e.target.value)}
+                className="bg-bg-tertiary border-bg-tertiary text-text-primary"
+              />
+              <div className="flex justify-between items-center">
+                <select className="bg-bg-tertiary border border-bg-tertiary rounded-md px-3 py-2 text-text-primary text-sm">
+                  <option>All Chains</option>
+                  <option>Sepolia</option>
+                  <option>RiseChain</option>
+                  <option>MegaETH</option>
+                  <option>Pharos</option>
+                </select>
+                <Button className="button-primary" disabled={!gmMessage.trim()}>
+                  <Send size={16} className="mr-2" />
+                  GM Everyone!
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Community Feed */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-text-primary">Community GM Feed</h3>
+            {gmPosts.map((post) => (
+              <Card key={post.id} className="trading-card">
+                <CardContent className="pt-6">
+                  <div className="flex items-start space-x-3">
+                    <Avatar>
+                      <AvatarFallback className="bg-primary text-white">
+                        {post.user[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="font-medium text-text-primary">{post.user}</span>
+                        <span className="px-2 py-1 bg-accent/20 text-accent text-xs rounded-full">
+                          {post.chain}
+                        </span>
+                        <span className="px-2 py-1 bg-warning/20 text-warning text-xs rounded-full">
+                          🔥 {post.streak} day streak
+                        </span>
+                      </div>
+                      <p className="text-text-primary mb-3">{post.message}</p>
+                      <div className="flex items-center space-x-4 text-sm text-text-secondary">
+                        <span>{post.time}</span>
+                        <button className="flex items-center space-x-1 hover:text-error transition-colors">
+                          <Heart size={14} />
+                          <span>{post.likes}</span>
+                        </button>
+                        <button className="flex items-center space-x-1 hover:text-primary transition-colors">
+                          <MessageCircle size={14} />
+                          <span>{post.comments}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <h1 className="text-4xl font-bold text-text-primary mb-2">
-            {greeting} SCRYPTEX!
-          </h1>
-          <p className="text-text-secondary">
-            {timeOfDay < 12 
-              ? "Good morning, trader! Ready to conquer the markets?"
-              : timeOfDay < 18 
-              ? "Good afternoon! How's your trading going?"
-              : "Good night! Don't forget to check your positions!"}
-          </p>
         </div>
 
+        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Daily Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-bg-tertiary rounded-lg p-4">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Users size={16} className="text-primary" />
-                <span className="text-sm text-text-secondary">Today's GMs</span>
+          {/* Daily Rewards */}
+          <Card className="trading-card">
+            <CardHeader>
+              <CardTitle className="text-text-primary">Daily Rewards</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-warning mb-2">Day 12</div>
+                <p className="text-text-secondary text-sm">Current Streak</p>
               </div>
-              <div className="text-2xl font-bold text-text-primary">{greetingCount}</div>
-            </div>
-            <div className="bg-bg-tertiary rounded-lg p-4">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Zap size={16} className="text-accent" />
-                <span className="text-sm text-text-secondary">STEX Earned</span>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-secondary">Today's GM:</span>
+                  <span className="text-success">+10 STEX</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-secondary">Streak Bonus:</span>
+                  <span className="text-warning">+5 STEX</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium">
+                  <span className="text-text-primary">Total Today:</span>
+                  <span className="text-primary">+15 STEX</span>
+                </div>
               </div>
-              <div className="text-2xl font-bold text-text-primary">+{hasGreeted ? 5 : 0}</div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Greeting Button */}
-          <Button
-            onClick={handleGreeting}
-            disabled={hasGreeted}
-            className={`w-full ${hasGreeted ? 'bg-success' : 'button-primary'} text-lg font-semibold py-6`}
-            size="lg"
-          >
-            {hasGreeted ? (
-              <div className="flex items-center space-x-2">
-                <Heart size={20} />
-                <span>GM Sent! +5 STEX</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <IconComponent size={20} />
-                <span>Say {greeting}!</span>
-              </div>
-            )}
-          </Button>
-
-          {/* Daily Challenge */}
-          <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-text-primary mb-2">Daily Challenge</h3>
-            <p className="text-sm text-text-secondary mb-3">
-              Complete 3 swaps today to earn an extra 25 STEX tokens!
-            </p>
-            <div className="flex items-center space-x-2">
-              <div className="flex space-x-1">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className={`w-3 h-3 rounded-full ${
-                      i <= 1 ? 'bg-primary' : 'bg-bg-tertiary'
-                    }`}
-                  />
+          {/* Leaderboard */}
+          <Card className="trading-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-text-primary">
+                <Trophy className="text-warning" size={20} />
+                <span>GM Leaderboard</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {leaderboard.map((user) => (
+                  <div key={user.rank} className="flex items-center space-x-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      user.rank === 1 ? "bg-warning text-bg-primary" :
+                      user.rank === 2 ? "bg-text-secondary text-bg-primary" :
+                      user.rank === 3 ? "bg-accent text-white" :
+                      "bg-bg-tertiary text-text-primary"
+                    }`}>
+                      {user.rank}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-text-primary text-sm">{user.user}</div>
+                      <div className="text-text-muted text-xs">{user.streak} day streak</div>
+                    </div>
+                    <div className="text-primary text-sm font-medium">{user.points.toLocaleString()}</div>
+                  </div>
                 ))}
               </div>
-              <span className="text-xs text-text-muted">1/3 swaps completed</span>
-            </div>
-          </div>
-
-          {/* Community Message */}
-          <div className="text-center">
-            <p className="text-sm text-text-muted">
-              "The best time to trade was yesterday. The second best time is now."
-            </p>
-            <p className="text-xs text-text-secondary mt-2">- SCRYPTEX Community</p>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

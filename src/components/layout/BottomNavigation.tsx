@@ -35,8 +35,8 @@ export const BottomNavigation = () => {
   const location = useLocation();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary border-t border-bg-tertiary">
-      <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary border-t border-bg-tertiary">
+      <div className="flex items-center justify-around py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -46,10 +46,10 @@ export const BottomNavigation = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center py-2 px-3 min-w-[60px] transition-colors duration-200 rounded-lg",
+                "flex flex-col items-center justify-center py-2 px-3 min-w-[60px] transition-colors duration-200",
                 isActive
-                  ? "text-primary bg-primary/10"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary/50"
+                  ? "text-primary"
+                  : "text-text-secondary hover:text-text-primary"
               )}
             >
               <Icon size={20} className="mb-1" />
