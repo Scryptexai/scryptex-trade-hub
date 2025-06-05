@@ -4,35 +4,43 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { WagmiProvider } from 'wagmi';
 import { Layout } from "@/components/layout/Layout";
+import { config } from "@/config/web3";
 import Dashboard from "./pages/Dashboard";
 import Swap from "./pages/Swap";
 import Create from "./pages/Create";
 import GM from "./pages/GM";
 import Bridge from "./pages/Bridge";
+import Trading from "./pages/Trading";
+import Airdrop from "./pages/Airdrop";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/swap" element={<Swap />} />
-            <Route path="/create" element={<Create />} />
-            <Route path="/gm" element={<GM />} />
-            <Route path="/bridge" element={<Bridge />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <WagmiProvider config={config}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/swap" element={<Swap />} />
+              <Route path="/create" element={<Create />} />
+              <Route path="/gm" element={<GM />} />
+              <Route path="/bridge" element={<Bridge />} />
+              <Route path="/trading" element={<Trading />} />
+              <Route path="/airdrop" element={<Airdrop />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </WagmiProvider>
 );
 
 export default App;

@@ -1,7 +1,8 @@
 
 import { useState } from "react";
-import { Menu, X, Gift, Users, Settings, BarChart3, HelpCircle, BookOpen } from "lucide-react";
+import { Menu, Gift, Users, Settings, BarChart3, HelpCircle, BookOpen, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +12,12 @@ import {
 } from "@/components/ui/sheet";
 
 const menuItems = [
+  {
+    icon: TrendingUp,
+    label: "Trading",
+    description: "Trade tokens",
+    href: "/trading",
+  },
   {
     icon: Gift,
     label: "Airdrop",
@@ -67,8 +74,9 @@ export const HamburgerMenu = () => {
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button
+              <Link
                 key={item.href}
+                to={item.href}
                 onClick={() => setIsOpen(false)}
                 className="w-full flex items-center space-x-3 p-3 rounded-md hover:bg-bg-tertiary transition-colors duration-200 text-left"
               >
@@ -77,7 +85,7 @@ export const HamburgerMenu = () => {
                   <div className="text-text-primary font-medium">{item.label}</div>
                   <div className="text-text-muted text-sm">{item.description}</div>
                 </div>
-              </button>
+              </Link>
             );
           })}
         </div>

@@ -1,5 +1,5 @@
 
-import { Home, ArrowUpDown, Plus, Sun, ArrowLeftRight } from "lucide-react";
+import { Home, ArrowUpDown, Plus, Sun, TrendingUp } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,11 @@ const navItems = [
     label: "Swap",
   },
   {
+    path: "/trading",
+    icon: TrendingUp,
+    label: "Trading",
+  },
+  {
     path: "/create",
     icon: Plus,
     label: "Create",
@@ -23,11 +28,6 @@ const navItems = [
     path: "/gm",
     icon: Sun,
     label: "GM",
-  },
-  {
-    path: "/bridge",
-    icon: ArrowLeftRight,
-    label: "Bridge",
   },
 ];
 
