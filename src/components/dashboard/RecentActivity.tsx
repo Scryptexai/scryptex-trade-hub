@@ -1,5 +1,4 @@
-
-import { Clock, ArrowUpDown, Plus, Bridge } from "lucide-react";
+import { Clock, ArrowUpDown, Plus, bridge } from "lucide-react";
 
 const activities = [
   {
@@ -43,7 +42,7 @@ const getActivityIcon = (type: string) => {
     case "create":
       return <Plus size={16} className="text-success" />;
     case "bridge":
-      return <Bridge size={16} className="text-warning" />;
+      return <bridge size={16} className="text-warning" />;
     default:
       return <Clock size={16} className="text-text-secondary" />;
   }
