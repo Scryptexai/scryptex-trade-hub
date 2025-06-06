@@ -133,12 +133,12 @@ const Trading = () => {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
               {/* Chain Selector */}
-              <Select value={selectedChain?.toString()} onValueChange={(value) => setSelectedChain(value ? parseInt(value) : undefined)}>
+              <Select value={selectedChain ? selectedChain.toString() : "all"} onValueChange={(value) => setSelectedChain(value === "all" ? undefined : parseInt(value))}>
                 <SelectTrigger className="w-40 bg-bg-tertiary border-bg-tertiary text-text-primary">
                   <SelectValue placeholder="All Chains" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Chains</SelectItem>
+                  <SelectItem value="all">All Chains</SelectItem>
                   {chains.map((chain) => (
                     <SelectItem key={chain.chain_id} value={chain.chain_id.toString()}>
                       {chain.name}
