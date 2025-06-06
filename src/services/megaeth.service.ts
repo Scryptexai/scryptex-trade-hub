@@ -23,9 +23,19 @@ export class MegaETHService {
   }
 
   async initializeContracts() {
-    const bridgeABI = []; // Add actual ABI
-    const swapABI = []; // Add actual ABI
-    const tradingABI = []; // Add actual ABI
+    const bridgeABI = [
+      "function bridgeETH(address destinationAddress, uint256 destinationChain) external payable",
+      "function bridgeToken(address token, uint256 amount, address destinationAddress, uint256 destinationChain) external",
+      "function getRealtimeMetrics() external view returns (tuple(uint256,uint256,uint256,uint256,uint256))"
+    ];
+    
+    const swapABI = [
+      "function swap(tuple(address,address,uint256,uint256,address,uint256)) external payable"
+    ];
+    
+    const tradingABI = [
+      "function createToken(string,string,string,string,uint256,uint256,uint256) external payable"
+    ];
 
     this.contracts.bridge = new ethers.Contract(
       process.env.MEGA_BRIDGE_ADDRESS || "",
@@ -63,8 +73,8 @@ export class MegaETHService {
     destinationChain: number;
     destinationAddress: string;
   }) {
-    const signer = this.provider.getSigner();
-    const contract = this.contracts.bridge.connect(signer);
+    const signer = await this.provider.getSigner();
+    const contract = this.contracts.bridge.connect(signer) as ethers.Contract;
 
     let tx;
     
@@ -157,11 +167,11 @@ export class MegaETHService {
       const metrics = await contract.getRealtimeMetrics();
       
       return {
-        miniBlockTime: metrics.miniBlockTime,
-        evmBlockTime: metrics.evmBlockTime,
-        transactionLatency: metrics.transactionLatency,
-        throughput: metrics.throughput,
-        lastUpdated: metrics.lastUpdated
+        miniBlockTime: metrics[0],
+        evmBlockTime: metrics[1],
+        transactionLatency: metrics[2],
+        throughput: metrics[3],
+        lastUpdated: metrics[4]
       };
     } catch (error) {
       console.error('Failed to get performance metrics:', error);
@@ -206,8 +216,8 @@ export class MegaETHService {
     initialPrice: string;
     maxSupply: string;
   }) {
-    const signer = this.provider.getSigner();
-    const contract = this.contracts.trading.connect(signer);
+    const signer = await this.provider.getSigner();
+    const contract = this.contracts.trading.connect(signer) as ethers.Contract;
 
     const tx = await contract.createToken(
       params.name,

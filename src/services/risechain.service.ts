@@ -17,10 +17,21 @@ export class RiseChainService {
   }
 
   async initializeContracts() {
-    // Initialize contract instances
-    const bridgeABI = []; // Add actual ABI
-    const swapABI = []; // Add actual ABI
-    const tradingABI = []; // Add actual ABI
+    // Initialize contract instances with proper ABIs
+    const bridgeABI = [
+      "function bridgeETH(address destinationAddress, uint256 destinationChain) external payable",
+      "function bridgeToken(address token, uint256 amount, address destinationAddress, uint256 destinationChain) external"
+    ];
+    
+    const swapABI = [
+      "function swap(tuple(address,address,uint256,uint256,address,uint256)) external payable"
+    ];
+    
+    const tradingABI = [
+      "function createToken(string,string,string,string,uint256,uint256,uint256) external payable",
+      "function getNewTokens() external view returns (address[])",
+      "function getTrendingTokens() external view returns (address[])"
+    ];
 
     this.contracts.bridge = new ethers.Contract(
       process.env.RISE_BRIDGE_ADDRESS || "",
@@ -75,8 +86,8 @@ export class RiseChainService {
     destinationChain: number;
     destinationAddress: string;
   }) {
-    const signer = this.provider.getSigner();
-    const contract = this.contracts.bridge.connect(signer);
+    const signer = await this.provider.getSigner();
+    const contract = this.contracts.bridge.connect(signer) as ethers.Contract;
 
     if (params.token === 'ETH') {
       return await contract.bridgeETH(
@@ -102,8 +113,8 @@ export class RiseChainService {
     initialPrice: string;
     maxSupply: string;
   }) {
-    const signer = this.provider.getSigner();
-    const contract = this.contracts.trading.connect(signer);
+    const signer = await this.provider.getSigner();
+    const contract = this.contracts.trading.connect(signer) as ethers.Contract;
 
     return await contract.createToken(
       params.name,
@@ -125,8 +136,8 @@ export class RiseChainService {
     to: string;
     deadline: number;
   }) {
-    const signer = this.provider.getSigner();
-    const contract = this.contracts.swap.connect(signer);
+    const signer = await this.provider.getSigner();
+    const contract = this.contracts.swap.connect(signer) as ethers.Contract;
 
     const swapParams = {
       tokenIn: params.tokenIn,
