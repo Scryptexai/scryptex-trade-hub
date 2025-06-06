@@ -1,6 +1,7 @@
 
 import { RiseChainService } from './risechain.service';
 import { MegaETHService } from './megaeth.service';
+import { databaseService } from './database.service';
 
 export class BlockchainService {
   private riseChain: RiseChainService;
@@ -36,21 +37,68 @@ export class BlockchainService {
       token: string;
       amount: string;
       destinationAddress: string;
+      userId?: string;
     }
   ) {
     const sourceService = this.getChainService(sourceChain);
     
-    if (sourceChain === 6342) {
-      // Use real-time bridging for MegaETH
-      return await (sourceService as MegaETHService).bridgeWithRealtimeConfirmation({
-        ...params,
-        destinationChain
+    // Create bridge request in database
+    let bridgeRequestId: string | undefined;
+    if (params.userId) {
+      const bridgeRequest = await databaseService.createBridgeRequest({
+        user_id: params.userId,
+        source_chain_id: sourceChain,
+        destination_chain_id: destinationChain,
+        token_id: null, // We'd need to resolve this from contract address
+        amount: parseFloat(params.amount),
+        status: 'pending'
       });
-    } else {
-      return await (sourceService as RiseChainService).bridgeAssets({
-        ...params,
-        destinationChain
-      });
+      bridgeRequestId = bridgeRequest.id;
+    }
+
+    try {
+      let result;
+      if (sourceChain === 6342) {
+        // Use real-time bridging for MegaETH
+        result = await (sourceService as MegaETHService).bridgeWithRealtimeConfirmation({
+          ...params,
+          destinationChain
+        });
+      } else {
+        result = await (sourceService as RiseChainService).bridgeAssets({
+          ...params,
+          destinationChain
+        });
+      }
+
+      // Update bridge request with transaction hash
+      if (bridgeRequestId && result.tx) {
+        await databaseService.updateBridgeRequest(bridgeRequestId, {
+          source_tx_hash: result.tx.hash,
+          status: 'processing'
+        });
+
+        // Store transaction in database
+        await databaseService.createTransaction({
+          chain_id: sourceChain,
+          tx_hash: result.tx.hash,
+          from_address: params.destinationAddress, // This should be the actual sender
+          to_address: params.destinationAddress,
+          value: parseFloat(params.amount),
+          transaction_type: 'bridge',
+          status: 'pending'
+        });
+      }
+
+      return result;
+    } catch (error) {
+      // Update bridge request with error status
+      if (bridgeRequestId) {
+        await databaseService.updateBridgeRequest(bridgeRequestId, {
+          status: 'failed'
+        });
+      }
+      throw error;
     }
   }
 
@@ -63,15 +111,50 @@ export class BlockchainService {
       logoUrl: string;
       initialPrice: string;
       maxSupply: string;
+      userId?: string;
     }
   ) {
     const service = this.getChainService(chainId);
     
-    if (chainId === 6342) {
-      // Use real-time creation for MegaETH
-      return await (service as MegaETHService).createTokenWithRealtime(params);
-    } else {
-      return await (service as RiseChainService).createToken(params);
+    try {
+      let result;
+      if (chainId === 6342) {
+        // Use real-time creation for MegaETH
+        result = await (service as MegaETHService).createTokenWithRealtime(params);
+      } else {
+        result = await (service as RiseChainService).createToken(params);
+      }
+
+      // Store token in database
+      if (result.tx && params.userId) {
+        await databaseService.createToken({
+          chain_id: chainId,
+          contract_address: '', // We'd get this from the transaction receipt
+          name: params.name,
+          symbol: params.symbol,
+          description: params.description,
+          logo_url: params.logoUrl,
+          initial_price: parseFloat(params.initialPrice),
+          max_supply: parseFloat(params.maxSupply),
+          creator_id: params.userId,
+          is_verified: false,
+          is_active: true
+        });
+
+        // Store transaction
+        await databaseService.createTransaction({
+          chain_id: chainId,
+          tx_hash: result.tx.hash,
+          from_address: '', // Get from transaction
+          transaction_type: 'token_creation',
+          status: 'pending'
+        });
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Token creation failed:', error);
+      throw error;
     }
   }
 
@@ -84,20 +167,33 @@ export class BlockchainService {
       minAmountOut: string;
       to: string;
       deadline: number;
+      userId?: string;
     }
   ) {
     const service = this.getChainService(chainId);
-    return await (service as RiseChainService).swapTokens(params);
+    const result = await (service as RiseChainService).swapTokens(params);
+
+    // Store swap transaction
+    if (result.tx && params.userId) {
+      await databaseService.createTransaction({
+        chain_id: chainId,
+        tx_hash: result.tx.hash,
+        from_address: params.to,
+        transaction_type: 'swap',
+        status: 'pending',
+        amount: parseFloat(params.amountIn)
+      });
+    }
+
+    return result;
   }
 
   async getNewTokens(chainId: number) {
-    const service = this.getChainService(chainId);
-    return await (service as RiseChainService).getNewTokens();
+    return await databaseService.getNewTokens(chainId);
   }
 
   async getTrendingTokens(chainId: number) {
-    const service = this.getChainService(chainId);
-    return await (service as RiseChainService).getTrendingTokens();
+    return await databaseService.getTrendingTokens(chainId);
   }
 
   async getNetworkStats(chainId: number) {
@@ -122,24 +218,7 @@ export class BlockchainService {
   }
 
   async getAllSupportedChains() {
-    return [
-      {
-        chainId: 11155931,
-        name: 'RiseChain Testnet',
-        symbol: 'ETH',
-        rpcUrl: 'https://testnet.rizelabs.xyz',
-        explorerUrl: 'https://explorer.testnet.rizelabs.xyz',
-        features: ['Fast finality', 'Low fees', 'Built-in oracles', 'Predeploy contracts']
-      },
-      {
-        chainId: 6342,
-        name: 'MegaETH Testnet',
-        symbol: 'ETH',
-        rpcUrl: 'https://6342.rpc.thirdweb.com',
-        explorerUrl: 'https://megaexplorer.xyz',
-        features: ['Real-time', 'Mini blocks', 'Ultra-low latency', 'High throughput']
-      }
-    ];
+    return await databaseService.getChains();
   }
 }
 
