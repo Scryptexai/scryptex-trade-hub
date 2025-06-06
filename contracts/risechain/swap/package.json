@@ -1,0 +1,30 @@
+
+{
+  "name": "risechain-swap-contract",
+  "version": "1.0.0",
+  "description": "RiseChain Swap DEX Contract with Real Chain SDK",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deploy.js --network riseTestnet",
+    "verify": "npx hardhat verify --network riseTestnet",
+    "test": "npx hardhat test",
+    "node": "npx hardhat node"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.3",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.17.2"
+  },
+  "keywords": [
+    "risechain",
+    "dex",
+    "swap",
+    "defi",
+    "real-chain-sdk"
+  ],
+  "author": "Scryptex Team",
+  "license": "MIT"
+}
