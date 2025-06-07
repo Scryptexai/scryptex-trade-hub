@@ -1,61 +1,130 @@
 
 const { ethers } = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
-  console.log("🚀 Deploying RiseChain Bridge Contract...");
+  console.log("🚀 Deploying RiseChain Bridge System...");
 
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with account:", deployer.address);
+  console.log("Deploying with account:", deployer.address);
 
   const balance = await deployer.getBalance();
   console.log("Account balance:", ethers.utils.formatEther(balance), "ETH");
 
-  // Validator addresses for RiseChain
-  const validators = [
-    process.env.VALIDATOR_1 || "0x742d35Cc6634C0532925a3b8D6c6a682edc44BeE",
-    process.env.VALIDATOR_2 || "0x5c7Be6c5a8F9d8ae5d7f6a0c7F4e3B2A1C9D8E7F",
-    process.env.VALIDATOR_3 || "0x8A4B9c2D3E1F0A5B6C7D8E9F1A2B3C4D5E6F7A8B",
-    process.env.VALIDATOR_4 || "0x1F2E3D4C5B6A9B8C7D6E5F4A3B2C1D0E9F8A7B6C",
-    process.env.VALIDATOR_5 || "0x6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F"
-  ];
-
-  // Deploy RiseChain Bridge
-  const RiseChainBridge = await ethers.getContractFactory("RiseChainBridge");
-  const bridge = await RiseChainBridge.deploy(validators, {
-    gasLimit: 5000000,
-    gasPrice: ethers.utils.parseUnits("1", "gwei")
-  });
-
-  await bridge.deployed();
-
-  console.log("✅ RiseChain Bridge deployed to:", bridge.address);
-  console.log("📊 Transaction hash:", bridge.deployTransaction.hash);
-  console.log("⛽ Gas used:", bridge.deployTransaction.gasLimit.toString());
-
-  // Wait for confirmations
-  console.log("⏳ Waiting for confirmations...");
-  await bridge.deployTransaction.wait(5);
-
-  console.log("🎉 Deployment completed successfully!");
-  console.log("🔗 Explorer:", `https://explorer.testnet.rizelabs.xyz/address/${bridge.address}`);
-
-  // Save deployment info
-  const deploymentInfo = {
-    network: "riseTestnet",
-    contractName: "RiseChainBridge",
-    contractAddress: bridge.address,
+  const deploymentData = {
+    network: "risechain",
+    chainId: 11155931,
     deployer: deployer.address,
-    transactionHash: bridge.deployTransaction.hash,
-    validators: validators,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    contracts: {}
   };
 
-  console.log("📄 Deployment info:", JSON.stringify(deploymentInfo, null, 2));
+  try {
+    // 1. Deploy PointsModule
+    console.log("\n📊 Deploying PointsModule...");
+    const PointsModule = await ethers.getContractFactory("PointsModule");
+    const pointsModule = await PointsModule.deploy();
+    await pointsModule.deployed();
+    console.log("PointsModule deployed to:", pointsModule.address);
+    deploymentData.contracts.PointsModule = pointsModule.address;
+
+    // 2. Deploy FeeTreasury
+    console.log("\n💰 Deploying FeeTreasury...");
+    const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
+    const feeTreasury = await FeeTreasury.deploy();
+    await feeTreasury.deployed();
+    console.log("FeeTreasury deployed to:", feeTreasury.address);
+    deploymentData.contracts.FeeTreasury = feeTreasury.address;
+
+    // 3. Deploy ValidatorRegistry
+    console.log("\n🔍 Deploying ValidatorRegistry...");
+    const initialValidators = [deployer.address]; // Add more validators as needed
+    const ValidatorRegistry = await ethers.getContractFactory("ValidatorRegistry");
+    const validatorRegistry = await ValidatorRegistry.deploy(initialValidators);
+    await validatorRegistry.deployed();
+    console.log("ValidatorRegistry deployed to:", validatorRegistry.address);
+    deploymentData.contracts.ValidatorRegistry = validatorRegistry.address;
+
+    // 4. Deploy BridgeReceiver (needs to be deployed before MessageRouter)
+    console.log("\n📥 Deploying BridgeReceiver...");
+    const BridgeReceiver = await ethers.getContractFactory("BridgeReceiver");
+    const bridgeReceiver = await BridgeReceiver.deploy(
+      ethers.constants.AddressZero, // Will be set after MessageRouter deployment
+      pointsModule.address
+    );
+    await bridgeReceiver.deployed();
+    console.log("BridgeReceiver deployed to:", bridgeReceiver.address);
+    deploymentData.contracts.BridgeReceiver = bridgeReceiver.address;
+
+    // 5. Deploy BridgeMessageRouter
+    console.log("\n🌐 Deploying BridgeMessageRouter...");
+    const BridgeMessageRouter = await ethers.getContractFactory("BridgeMessageRouter");
+    const messageRouter = await BridgeMessageRouter.deploy(bridgeReceiver.address);
+    await messageRouter.deployed();
+    console.log("BridgeMessageRouter deployed to:", messageRouter.address);
+    deploymentData.contracts.BridgeMessageRouter = messageRouter.address;
+
+    // 6. Deploy BridgeCore
+    console.log("\n📤 Deploying BridgeCore...");
+    const bridgeFee = 100; // 1% fee
+    const BridgeCore = await ethers.getContractFactory("BridgeCore");
+    const bridgeCore = await BridgeCore.deploy(
+      messageRouter.address,
+      feeTreasury.address,
+      bridgeFee
+    );
+    await bridgeCore.deployed();
+    console.log("BridgeCore deployed to:", bridgeCore.address);
+    deploymentData.contracts.BridgeCore = bridgeCore.address;
+
+    // Configuration phase
+    console.log("\n⚙️  Configuring contracts...");
+
+    // Set authorized callers
+    await pointsModule.setAuthorizedCaller(bridgeReceiver.address, true);
+    await feeTreasury.setAuthorizedCaller(bridgeCore.address, true);
+    await messageRouter.setAuthorizedCaller(bridgeCore.address, true);
+
+    console.log("✅ Contract configuration completed!");
+
+    // Save deployment info
+    const deploymentsDir = path.join(__dirname, "../deployments");
+    if (!fs.existsSync(deploymentsDir)) {
+      fs.mkdirSync(deploymentsDir, { recursive: true });
+    }
+
+    const deploymentFile = path.join(deploymentsDir, `risechain-bridge-${Date.now()}.json`);
+    fs.writeFileSync(deploymentFile, JSON.stringify(deploymentData, null, 2));
+
+    console.log("\n🎉 Bridge System Deployment Completed!");
+    console.log("📁 Deployment info saved to:", deploymentFile);
+    
+    console.log("\n📋 Contract Addresses:");
+    console.log("BridgeCore:", bridgeCore.address);
+    console.log("BridgeReceiver:", bridgeReceiver.address);
+    console.log("BridgeMessageRouter:", messageRouter.address);
+    console.log("ValidatorRegistry:", validatorRegistry.address);
+    console.log("FeeTreasury:", feeTreasury.address);
+    console.log("PointsModule:", pointsModule.address);
+
+    console.log("\n🔧 Environment Variables to Add:");
+    console.log(`RISECHAIN_BRIDGE_CORE=${bridgeCore.address}`);
+    console.log(`RISECHAIN_BRIDGE_RECEIVER=${bridgeReceiver.address}`);
+    console.log(`RISECHAIN_MESSAGE_ROUTER=${messageRouter.address}`);
+    console.log(`RISECHAIN_VALIDATOR_REGISTRY=${validatorRegistry.address}`);
+    console.log(`RISECHAIN_FEE_TREASURY=${feeTreasury.address}`);
+    console.log(`RISECHAIN_POINTS_MODULE=${pointsModule.address}`);
+
+  } catch (error) {
+    console.error("❌ Deployment failed:", error);
+    throw error;
+  }
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("❌ Deployment failed:", error);
+    console.error(error);
     process.exit(1);
   });

@@ -1,41 +1,36 @@
 
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-etherscan");
-require('dotenv').config();
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
+const RISECHAIN_RPC_URL = process.env.RISECHAIN_RPC_URL || "https://rpc.risechain.io";
+const PRIVATE_KEY = process.env.RISECHAIN_PRIVATE_KEY || "";
+
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
     version: "0.8.19",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+      },
+    },
   },
   networks: {
-    riseTestnet: {
-      url: process.env.RISE_RPC_URL || "https://testnet.rizelabs.xyz",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 11155931,
-      gasPrice: 1000000000,
-      timeout: 60000,
-      confirmations: 5
-    }
-  },
-  etherscan: {
-    apiKey: {
-      riseTestnet: process.env.RISE_API_KEY || "",
+    hardhat: {
+      chainId: 31337,
     },
-    customChains: [
-      {
-        network: "riseTestnet",
-        chainId: 11155931,
-        urls: {
-          apiURL: "https://explorer.testnet.rizelabs.xyz/api",
-          browserURL: "https://explorer.testnet.rizelabs.xyz",
-        },
-      },
-    ],
-  }
+    risechain: {
+      url: RISECHAIN_RPC_URL,
+      chainId: 11155931,
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      gas: 8000000,
+      gasPrice: 1000000000,
+    },
+  },
+  paths: {
+    sources: "../../shared",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
 };

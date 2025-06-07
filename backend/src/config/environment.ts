@@ -1,4 +1,3 @@
-
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -25,6 +24,21 @@ export const config = {
     chainId: parseInt(process.env.RISECHAIN_CHAIN_ID || '11155931', 10),
     privateKey: process.env.RISECHAIN_PRIVATE_KEY || '',
     contracts: {
+      // Bridge System
+      bridgeCore: process.env.RISECHAIN_BRIDGE_CORE || '',
+      bridgeReceiver: process.env.RISECHAIN_BRIDGE_RECEIVER || '',
+      messageRouter: process.env.RISECHAIN_MESSAGE_ROUTER || '',
+      validatorRegistry: process.env.RISECHAIN_VALIDATOR_REGISTRY || '',
+      feeTreasury: process.env.RISECHAIN_FEE_TREASURY || '',
+      pointsModule: process.env.RISECHAIN_POINTS_MODULE || '',
+      
+      // Swap System
+      swapFactory: process.env.RISECHAIN_SWAP_FACTORY || '',
+      swapRouter: process.env.RISECHAIN_SWAP_ROUTER || '',
+      weth: process.env.RISECHAIN_WETH || '',
+      swapPointsModule: process.env.RISECHAIN_SWAP_POINTS_MODULE || '',
+      
+      // Legacy contracts (keep for backward compatibility)
       bridge: process.env.RISECHAIN_BRIDGE_CONTRACT || '',
       swap: process.env.RISECHAIN_SWAP_CONTRACT || '',
       tokenFactory: process.env.RISECHAIN_TOKEN_FACTORY || '',
@@ -39,6 +53,21 @@ export const config = {
     chainId: parseInt(process.env.MEGAETH_CHAIN_ID || '6342', 10),
     privateKey: process.env.MEGAETH_PRIVATE_KEY || '',
     contracts: {
+      // Bridge System
+      bridgeCore: process.env.MEGAETH_BRIDGE_CORE || '',
+      bridgeReceiver: process.env.MEGAETH_BRIDGE_RECEIVER || '',
+      messageRouter: process.env.MEGAETH_MESSAGE_ROUTER || '',
+      validatorRegistry: process.env.MEGAETH_VALIDATOR_REGISTRY || '',
+      feeTreasury: process.env.MEGAETH_FEE_TREASURY || '',
+      pointsModule: process.env.MEGAETH_POINTS_MODULE || '',
+      
+      // Swap System
+      swapFactory: process.env.MEGAETH_SWAP_FACTORY || '',
+      swapRouter: process.env.MEGAETH_SWAP_ROUTER || '',
+      weth: process.env.MEGAETH_WETH || '',
+      swapPointsModule: process.env.MEGAETH_SWAP_POINTS_MODULE || '',
+      
+      // Legacy contracts (keep for backward compatibility)
       bridge: process.env.MEGAETH_BRIDGE_CONTRACT || '',
       swap: process.env.MEGAETH_SWAP_CONTRACT || '',
       tokenFactory: process.env.MEGAETH_TOKEN_FACTORY || '',
