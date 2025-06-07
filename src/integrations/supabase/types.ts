@@ -140,6 +140,104 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "trade_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_deployments: {
+        Row: {
+          chain_id: number
+          contract_address: string
+          contract_name: string
+          deployed_at: string | null
+          deployer_address: string
+          deployment_block: number | null
+          deployment_tx_hash: string
+          id: string
+          is_verified: boolean | null
+          metadata: Json | null
+        }
+        Insert: {
+          chain_id: number
+          contract_address: string
+          contract_name: string
+          deployed_at?: string | null
+          deployer_address: string
+          deployment_block?: number | null
+          deployment_tx_hash: string
+          id?: string
+          is_verified?: boolean | null
+          metadata?: Json | null
+        }
+        Update: {
+          chain_id?: number
+          contract_address?: string
+          contract_name?: string
+          deployed_at?: string | null
+          deployer_address?: string
+          deployment_block?: number | null
+          deployment_tx_hash?: string
+          id?: string
+          is_verified?: boolean | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      token_social_metrics: {
+        Row: {
+          community_score: number | null
+          id: string
+          last_activity: string | null
+          token_address: string
+          total_comments: number | null
+          total_likes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          community_score?: number | null
+          id?: string
+          last_activity?: string | null
+          token_address: string
+          total_comments?: number | null
+          total_likes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          community_score?: number | null
+          id?: string
+          last_activity?: string | null
+          token_address?: string
+          total_comments?: number | null
+          total_likes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tokens: {
         Row: {
           chain_id: number
@@ -236,6 +334,84 @@ export type Database = {
           },
         ]
       }
+      trade_comments: {
+        Row: {
+          comment: string
+          id: string
+          is_successful: boolean | null
+          is_visible: boolean | null
+          likes: number | null
+          timestamp: string | null
+          token_address: string
+          trade_amount: number | null
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          id?: string
+          is_successful?: boolean | null
+          is_visible?: boolean | null
+          likes?: number | null
+          timestamp?: string | null
+          token_address: string
+          trade_amount?: number | null
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          id?: string
+          is_successful?: boolean | null
+          is_visible?: boolean | null
+          likes?: number | null
+          timestamp?: string | null
+          token_address?: string
+          trade_amount?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trader_profiles: {
+        Row: {
+          bio: string | null
+          id: string
+          is_verified: boolean | null
+          joined_at: string | null
+          reputation: number | null
+          successful_trades: number | null
+          total_trades: number | null
+          total_volume: number | null
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          bio?: string | null
+          id?: string
+          is_verified?: boolean | null
+          joined_at?: string | null
+          reputation?: number | null
+          successful_trades?: number | null
+          total_trades?: number | null
+          total_volume?: number | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          bio?: string | null
+          id?: string
+          is_verified?: boolean | null
+          joined_at?: string | null
+          reputation?: number | null
+          successful_trades?: number | null
+          total_trades?: number | null
+          total_volume?: number | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       trading_pairs: {
         Row: {
           base_token_id: string
@@ -299,6 +475,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trading_points: {
+        Row: {
+          chain_id: number
+          earned_at: string | null
+          id: string
+          is_successful: boolean | null
+          multiplier: number | null
+          points_earned: number
+          token_address: string
+          trade_amount: number
+          trade_type: string
+          transaction_hash: string
+          user_id: string
+        }
+        Insert: {
+          chain_id: number
+          earned_at?: string | null
+          id?: string
+          is_successful?: boolean | null
+          multiplier?: number | null
+          points_earned: number
+          token_address: string
+          trade_amount: number
+          trade_type: string
+          transaction_hash: string
+          user_id: string
+        }
+        Update: {
+          chain_id?: number
+          earned_at?: string | null
+          id?: string
+          is_successful?: boolean | null
+          multiplier?: number | null
+          points_earned?: number
+          token_address?: string
+          trade_amount?: number
+          trade_type?: string
+          transaction_hash?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -433,6 +651,42 @@ export type Database = {
           },
         ]
       }
+      user_points_summary: {
+        Row: {
+          id: string
+          last_trade_at: string | null
+          level: number | null
+          monthly_points: number | null
+          rank: number | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string
+          weekly_points: number | null
+        }
+        Insert: {
+          id?: string
+          last_trade_at?: string | null
+          level?: number | null
+          monthly_points?: number | null
+          rank?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id: string
+          weekly_points?: number | null
+        }
+        Update: {
+          id?: string
+          last_trade_at?: string | null
+          level?: number | null
+          monthly_points?: number | null
+          rank?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string
+          weekly_points?: number | null
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           avatar_url: string | null
@@ -518,7 +772,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      award_trading_points: {
+        Args: {
+          p_user_id: string
+          p_transaction_hash: string
+          p_chain_id: number
+          p_trade_type: string
+          p_token_address: string
+          p_trade_amount: number
+          p_is_successful?: boolean
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

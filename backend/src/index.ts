@@ -25,6 +25,7 @@ import bridgeRoutes from '@/routes/bridge';
 import swapRoutes from '@/routes/swap';
 import analyticsRoutes from '@/routes/analytics';
 import websocketRoutes from '@/routes/websocket';
+import socialTradingRoutes from '@/routes/social-trading';
 
 // Services
 import { WebSocketService } from '@/services/websocket/WebSocketService';
@@ -109,6 +110,7 @@ class App {
     this.app.use(`${apiPrefix}/tokens`, tokenRoutes);
     this.app.use(`${apiPrefix}/trading`, tradingRoutes);
     this.app.use(`${apiPrefix}/trading-v2`, enhancedTradingRoutes); // Enhanced trading system
+    this.app.use(`${apiPrefix}/social`, socialTradingRoutes); // Social trading features
     this.app.use(`${apiPrefix}/bridge`, bridgeRoutes);
     this.app.use(`${apiPrefix}/swap`, swapRoutes);
     this.app.use(`${apiPrefix}/analytics`, analyticsRoutes);
@@ -172,6 +174,7 @@ class App {
         logger.info(`📊 API Version: ${config.apiVersion}`);
         logger.info(`🔗 Health Check: http://localhost:${config.port}/health`);
         logger.info(`📈 Enhanced Trading API: http://localhost:${config.port}/api/${config.apiVersion}/trading-v2`);
+        logger.info(`👥 Social Trading API: http://localhost:${config.port}/api/${config.apiVersion}/social`);
       });
 
     } catch (error) {
