@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ArrowUpDown, Settings, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,19 +11,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Token list with SVG icon (empty string for now)
 const tokens = [
-  { symbol: "WETH", name: "Wrapped ETH", balance: "0.5432" },
-  { symbol: "USDC", name: "USD Coin", balance: "1,250.00" },
-  { symbol: "USDT", name: "Tether USD", balance: "800.50" },
-  { symbol: "WBTC", name: "Wrapped Bitcoin", balance: "0.0234" },
-  { symbol: "RISE", name: "RISE", balance: "10,000" },
+  { symbol: "WETH", name: "Wrapped ETH", icon: "", balance: "0.00" },
+  { symbol: "USDC", name: "USD Coin", icon: "", balance: "0.00" },
+  { symbol: "USDT", name: "Tether USD", icon: "", balance: "0.00" },
+  { symbol: "WBTC", name: "Wrapped Bitcoin", icon: "", balance: "0.00" },
+  { symbol: "RISE", name: "RISE", icon: "", balance: "0.00" },
 ];
 
+// Dummy hook for wallet balance (replace with actual wallet logic)
+const useWalletBalances = (address: string | undefined) => {
+  // TODO: Replace with actual logic to fetch token balances from wallet
+  // Example: return { WETH: "0.5432", USDC: "1250.00", ... }
+  return {
+    WETH: "0.5432",
+    USDC: "1250.00",
+    USDT: "800.50",
+    WBTC: "0.0234",
+    RISE: "10000",
+  };
+};
+
 const Swap = () => {
+  // Replace with actual wallet address from context/hook
+  const address = undefined; // e.g. useAccount()?.address
+  const balances = useWalletBalances(address);
+
+  // Set initial tokens
   const [fromToken, setFromToken] = useState(tokens[0]);
   const [toToken, setToToken] = useState(tokens[1]);
   const [fromAmount, setFromAmount] = useState("");
   const [slippage, setSlippage] = useState("0.5");
+
+  // Update displayed balance when token changes
+  const getBalance = (symbol: string) => balances[symbol] ?? "0.00";
 
   const handleSwapDirection = () => {
     setFromToken(toToken);
@@ -48,16 +69,26 @@ const Swap = () => {
             <div className="flex justify-between text-sm">
               <span className="text-text-secondary">From</span>
               <span className="text-text-muted">
-                Balance: {fromToken.balance} {fromToken.symbol}
+                Balance: {getBalance(fromToken.symbol)} {fromToken.symbol}
               </span>
             </div>
             <div className="flex space-x-2">
-              <Select value={fromToken.symbol} onValueChange={(value) => {
-                const token = tokens.find(t => t.symbol === value);
-                if (token) setFromToken(token);
-              }}>
-                <SelectTrigger className="w-32 bg-bg-tertiary border-bg-tertiary text-text-primary">
-                  <SelectValue />
+              <Select
+                value={fromToken.symbol}
+                onValueChange={(value) => {
+                  const token = tokens.find((t) => t.symbol === value);
+                  if (token) setFromToken(token);
+                }}
+              >
+                <SelectTrigger className="w-36 bg-bg-tertiary border-bg-tertiary text-text-primary">
+                  <SelectValue>
+                    <div className="flex items-center">
+                      {fromToken.icon && (
+                        <img src={fromToken.icon} alt={fromToken.symbol} className="w-5 h-5 mr-2" />
+                      )}
+                      <span>{fromToken.symbol}</span>
+                    </div>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-bg-secondary border-bg-tertiary">
                   {tokens.map((token) => (
@@ -66,7 +97,12 @@ const Swap = () => {
                       value={token.symbol}
                       className="text-text-primary hover:bg-bg-tertiary"
                     >
-                      {token.symbol}
+                      <div className="flex items-center">
+                        {token.icon && (
+                          <img src={token.icon} alt={token.symbol} className="w-5 h-5 mr-2" />
+                        )}
+                        <span>{token.symbol}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -97,16 +133,26 @@ const Swap = () => {
             <div className="flex justify-between text-sm">
               <span className="text-text-secondary">To</span>
               <span className="text-text-muted">
-                Balance: {toToken.balance} {toToken.symbol}
+                Balance: {getBalance(toToken.symbol)} {toToken.symbol}
               </span>
             </div>
             <div className="flex space-x-2">
-              <Select value={toToken.symbol} onValueChange={(value) => {
-                const token = tokens.find(t => t.symbol === value);
-                if (token) setToToken(token);
-              }}>
-                <SelectTrigger className="w-32 bg-bg-tertiary border-bg-tertiary text-text-primary">
-                  <SelectValue />
+              <Select
+                value={toToken.symbol}
+                onValueChange={(value) => {
+                  const token = tokens.find((t) => t.symbol === value);
+                  if (token) setToToken(token);
+                }}
+              >
+                <SelectTrigger className="w-36 bg-bg-tertiary border-bg-tertiary text-text-primary">
+                  <SelectValue>
+                    <div className="flex items-center">
+                      {toToken.icon && (
+                        <img src={toToken.icon} alt={toToken.symbol} className="w-5 h-5 mr-2" />
+                      )}
+                      <span>{toToken.symbol}</span>
+                    </div>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-bg-secondary border-bg-tertiary">
                   {tokens.map((token) => (
@@ -115,7 +161,12 @@ const Swap = () => {
                       value={token.symbol}
                       className="text-text-primary hover:bg-bg-tertiary"
                     >
-                      {token.symbol}
+                      <div className="flex items-center">
+                        {token.icon && (
+                          <img src={token.icon} alt={token.symbol} className="w-5 h-5 mr-2" />
+                        )}
+                        <span>{token.symbol}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

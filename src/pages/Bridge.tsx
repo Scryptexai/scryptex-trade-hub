@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ArrowRight, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,10 +12,26 @@ import {
 } from "@/components/ui/select";
 
 const chains = [
-  { id: "sepolia", name: "Sepolia", icon: "🔗" },
-  { id: "risechain", name: "RiseChain", icon: "🚀" },
-  { id: "megaeth", name: "MegaETH", icon: "⚡" },
-  { id: "pharos", name: "Pharos", icon: "🏛️" },
+  {
+    id: "sepolia",
+    name: "Sepolia",
+    icon: "https://img.cryptorank.io/coins/ethereum1524754015525.png",
+  },
+  {
+    id: "risechain",
+    name: "RiseChain",
+    icon: "https://img.cryptorank.io/coins/rise_chain1726504844513.png",
+  },
+  {
+    id: "megaeth",
+    name: "MegaETH",
+    icon: "https://img.cryptorank.io/coins/mega_eth1736756550892.png",
+  },
+  {
+    id: "pharos",
+    name: "Pharos",
+    icon: "https://img.cryptorank.io/coins/pharos1731308644189.png",
+  },
 ];
 
 const bridgeHistory = [
@@ -75,7 +90,7 @@ const Bridge = () => {
                         disabled={chain.id === destinationChain}
                       >
                         <div className="flex items-center space-x-2">
-                          <span>{chain.icon}</span>
+                          <img src={chain.icon} alt={chain.name} className="w-5 h-5" />
                           <span>{chain.name}</span>
                         </div>
                       </SelectItem>
@@ -103,7 +118,7 @@ const Bridge = () => {
                         disabled={chain.id === sourceChain}
                       >
                         <div className="flex items-center space-x-2">
-                          <span>{chain.icon}</span>
+                          <img src={chain.icon} alt={chain.name} className="w-5 h-5" />
                           <span>{chain.name}</span>
                         </div>
                       </SelectItem>

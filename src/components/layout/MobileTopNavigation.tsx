@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Menu, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,19 +22,41 @@ export const MobileTopNavigation = () => {
     <>
       <nav className="md:hidden flex items-center justify-between px-4 py-3 bg-bg-secondary border-b border-bg-tertiary">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+        <Link to="/" className="flex items-center space-x-2">
+          <img 
+            src="/media/logo.png" 
+            alt="Scryptex Logo" 
+            className="w-8 h-8 object-contain"
+            onError={(e) => {
+              // Fallback if logo doesn't exist
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          {/* Fallback logo */}
+          <div className="hidden w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">S</span>
           </div>
           <span className="text-lg font-bold text-text-primary">SCRYPTEX</span>
-        </div>
+        </Link>
 
         <div className="flex items-center space-x-3">
           {/* Chain Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="bg-bg-tertiary border-bg-tertiary text-text-primary hover:bg-bg-tertiary/80">
-                <span className="w-2 h-2 bg-success rounded-full mr-1"></span>
+                <img 
+                  src={selectedChain.iconUrl} 
+                  alt={selectedChain.name}
+                  className="w-3 h-3 mr-1"
+                  onError={(e) => {
+                    // Fallback to green dot if chain icon fails
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'block';
+                  }}
+                />
+                <span className="w-2 h-2 bg-success rounded-full mr-1 hidden"></span>
                 <ChevronDown size={14} />
               </Button>
             </DropdownMenuTrigger>
@@ -45,7 +67,17 @@ export const MobileTopNavigation = () => {
                   onClick={() => setSelectedChain(chain)}
                   className="text-text-primary hover:bg-bg-tertiary cursor-pointer"
                 >
-                  <span className="w-2 h-2 bg-success rounded-full mr-2"></span>
+                  <img 
+                    src={chain.iconUrl} 
+                    alt={chain.name}
+                    className="w-4 h-4 mr-2"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }}
+                  />
+                  <span className="w-2 h-2 bg-success rounded-full mr-2 hidden"></span>
                   {chain.name}
                 </DropdownMenuItem>
               ))}

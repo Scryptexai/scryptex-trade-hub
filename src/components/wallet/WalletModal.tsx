@@ -1,72 +1,55 @@
-
-import { useState } from "react";
-import { Wallet, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useWallet } from "@/hooks/useWallet";
+// components/WalletModal.tsx
+import { useEffect } from "react"
+import { useWallet } from "@/hooks/useWallet"
 
 interface WalletModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
 
 export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
-  const { connectWallet, isConnecting } = useWallet();
+  const { openConnectModal } = useWallet()
 
-  const walletOptions = [
-    {
-      name: "MetaMask",
-      type: "metamask" as const,
-      description: "Connect using MetaMask wallet",
-    },
-    {
-      name: "WalletConnect",
-      type: "walletconnect" as const,
-      description: "Connect using WalletConnect",
-    },
-    {
-      name: "Browser Wallet",
-      type: "injected" as const,
-      description: "Connect using injected wallet",
-    },
-  ];
+  useEffect(() => {
+    if (isOpen) {
+      openConnectModal()
+      // Close the custom modal since Web3Modal will handle everything
+      onClose()
+    }
+  }, [isOpen, openConnectModal, onClose])
 
-  const handleConnect = async (type: 'metamask' | 'walletconnect' | 'injected') => {
-    await connectWallet(type);
-    onClose();
-  };
+  // Web3Modal handles all UI, so we don't render anything
+  return null
+}
+
+// Alternatif: Jika Anda ingin langsung menggunakan Web3Modal tanpa wrapper
+// Anda bisa menggunakan komponen ini:
+
+export const Web3ConnectButton = () => {
+  const { isConnected, address, formatAddress, disconnectWallet, openConnectModal } = useWallet()
+
+  if (isConnected && address) {
+    return (
+      <div className="flex items-center space-x-2">
+        <span className="text-sm text-text-muted">
+          {formatAddress(address)}
+        </span>
+        <button
+          onClick={disconnectWallet}
+          className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+        >
+          Disconnect
+        </button>
+      </div>
+    )
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-bg-secondary border-bg-tertiary text-text-primary max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Wallet size={20} />
-            <span>Connect Wallet</span>
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          {walletOptions.map((wallet) => (
-            <Button
-              key={wallet.type}
-              variant="outline"
-              className="w-full justify-start bg-bg-tertiary border-bg-tertiary hover:bg-bg-tertiary/80 text-text-primary h-auto p-4"
-              onClick={() => handleConnect(wallet.type)}
-              disabled={isConnecting}
-            >
-              <div className="text-left">
-                <div className="font-medium">{wallet.name}</div>
-                <div className="text-text-muted text-sm">{wallet.description}</div>
-              </div>
-            </Button>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
+    <button
+      onClick={openConnectModal}
+      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+    >
+      Connect Wallet
+    </button>
+  )
+}
