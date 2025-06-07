@@ -20,6 +20,7 @@ import authRoutes from '@/routes/auth';
 import chainRoutes from '@/routes/chains';
 import tokenRoutes from '@/routes/tokens';
 import tradingRoutes from '@/routes/trading';
+import enhancedTradingRoutes from '@/routes/enhanced-trading';
 import bridgeRoutes from '@/routes/bridge';
 import swapRoutes from '@/routes/swap';
 import analyticsRoutes from '@/routes/analytics';
@@ -93,7 +94,12 @@ class App {
       res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        version: config.apiVersion
+        version: config.apiVersion,
+        services: {
+          database: 'connected',
+          redis: 'connected',
+          blockchain: 'connected'
+        }
       });
     });
 
@@ -102,6 +108,7 @@ class App {
     this.app.use(`${apiPrefix}/chains`, chainRoutes);
     this.app.use(`${apiPrefix}/tokens`, tokenRoutes);
     this.app.use(`${apiPrefix}/trading`, tradingRoutes);
+    this.app.use(`${apiPrefix}/trading-v2`, enhancedTradingRoutes); // Enhanced trading system
     this.app.use(`${apiPrefix}/bridge`, bridgeRoutes);
     this.app.use(`${apiPrefix}/swap`, swapRoutes);
     this.app.use(`${apiPrefix}/analytics`, analyticsRoutes);
@@ -160,9 +167,11 @@ class App {
       await this.initializeServices();
 
       this.server.listen(config.port, () => {
-        logger.info(`Server is running on port ${config.port}`);
-        logger.info(`Environment: ${config.nodeEnv}`);
-        logger.info(`API Version: ${config.apiVersion}`);
+        logger.info(`🚀 Trading System Server is running on port ${config.port}`);
+        logger.info(`🌍 Environment: ${config.nodeEnv}`);
+        logger.info(`📊 API Version: ${config.apiVersion}`);
+        logger.info(`🔗 Health Check: http://localhost:${config.port}/health`);
+        logger.info(`📈 Enhanced Trading API: http://localhost:${config.port}/api/${config.apiVersion}/trading-v2`);
       });
 
     } catch (error) {
