@@ -1,15 +1,14 @@
-
-import { RiseChainService } from './risechain.service';
-import { MegaETHService } from './megaeth.service';
+import { RiseChainServiceRefactored } from './blockchain/risechain.service.refactored';
+import { MegaETHServiceRefactored } from './blockchain/megaeth.service.refactored';
 import { databaseService } from './database.service';
 
 export class BlockchainService {
-  private riseChain: RiseChainService;
-  private megaETH: MegaETHService;
+  private riseChain: RiseChainServiceRefactored;
+  private megaETH: MegaETHServiceRefactored;
 
   constructor() {
-    this.riseChain = new RiseChainService();
-    this.megaETH = new MegaETHService();
+    this.riseChain = new RiseChainServiceRefactored();
+    this.megaETH = new MegaETHServiceRefactored();
   }
 
   async initialize() {
@@ -21,7 +20,7 @@ export class BlockchainService {
 
   getChainService(chainId: number) {
     switch (chainId) {
-      case 11155931: // RiseChain
+      case 7569: // RiseChain
         return this.riseChain;
       case 6342: // MegaETH
         return this.megaETH;
@@ -60,12 +59,12 @@ export class BlockchainService {
       let result;
       if (sourceChain === 6342) {
         // Use real-time bridging for MegaETH
-        result = await (sourceService as MegaETHService).bridgeWithRealtimeConfirmation({
+        result = await (sourceService as MegaETHServiceRefactored).bridgeWithRealtimeConfirmation({
           ...params,
           destinationChain
         });
       } else {
-        result = await (sourceService as RiseChainService).bridgeAssets({
+        result = await (sourceService as RiseChainServiceRefactored).bridgeAssets({
           ...params,
           destinationChain
         });
@@ -120,9 +119,9 @@ export class BlockchainService {
       let result;
       if (chainId === 6342) {
         // Use real-time creation for MegaETH
-        result = await (service as MegaETHService).createTokenWithRealtime(params);
+        result = await (service as MegaETHServiceRefactored).createTokenWithRealtime(params);
       } else {
-        result = await (service as RiseChainService).createToken(params);
+        result = await (service as RiseChainServiceRefactored).createToken(params);
       }
 
       // Store token in database
@@ -171,7 +170,7 @@ export class BlockchainService {
     }
   ) {
     const service = this.getChainService(chainId);
-    const result = await (service as RiseChainService).swapTokens(params);
+    const result = await (service as RiseChainServiceRefactored).swapTokens(params);
 
     // Store swap transaction
     if (result.tx && params.userId) {
@@ -200,9 +199,9 @@ export class BlockchainService {
     const service = this.getChainService(chainId);
     
     if (chainId === 6342) {
-      return await (service as MegaETHService).getRealtimeNetworkStats();
+      return await (service as MegaETHServiceRefactored).getRealtimeNetworkStats();
     } else {
-      return await (service as RiseChainService).getNetworkStats();
+      return await service.getNetworkStats();
     }
   }
 
@@ -210,10 +209,9 @@ export class BlockchainService {
     const service = this.getChainService(chainId);
     
     if (chainId === 6342) {
-      // Subscribe to real-time events for MegaETH
-      return (service as MegaETHService).subscribeToRealtimeEvents(callback);
+      return (service as MegaETHServiceRefactored).subscribeToRealtimeEvents(callback);
     } else {
-      (service as RiseChainService).subscribeToEvents(callback);
+      service.subscribeToEvents(callback);
     }
   }
 

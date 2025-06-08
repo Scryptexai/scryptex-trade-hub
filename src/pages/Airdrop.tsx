@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Gift, Trophy, Star, Clock, Users, Zap, Bridge, ArrowLeftRight, Twitter, MessageSquare } from "lucide-react";
+import { Gift, Trophy, Star, Clock, Users, Zap, ArrowLeftRight, Twitter, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -49,7 +48,7 @@ const tasks = [
     description: "Transfer assets between different chains",
     points: 300,
     completed: false,
-    icon: Bridge,
+    icon: ArrowLeftRight,
     action: "bridge",
   },
   {
