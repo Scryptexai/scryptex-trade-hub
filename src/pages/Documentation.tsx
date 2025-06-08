@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, Eye, Zap, Shield, Globe, Users, TrendingUp, Coins, Bridge, ArrowUpDown, Plus, Sun } from "lucide-react";
+import { Target, Eye, Zap, Shield, Globe, Users, TrendingUp, Coins, ArrowLeftRight, ArrowUpDown, Plus, Sun, MessageSquare, HelpCircle } from "lucide-react";
 
 const Documentation = () => {
   const features = [
@@ -19,7 +18,7 @@ const Documentation = () => {
       benefits: ["Cross-chain compatibility", "Optimal routing", "Low slippage"]
     },
     {
-      icon: <Bridge />,
+      icon: <ArrowLeftRight />,
       title: "Asset Bridging",
       description: "Bridge assets between different blockchain ecosystems securely",
       benefits: ["Secure transfers", "Fast confirmations", "Multi-chain support"]
