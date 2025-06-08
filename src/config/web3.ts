@@ -1,3 +1,4 @@
+
 import { createConfig, http } from 'wagmi'
 import { sepolia, mainnet } from 'wagmi/chains'
 import { walletConnect, metaMask, injected } from 'wagmi/connectors'
@@ -18,7 +19,7 @@ export const config = createConfig({
   },
 })
 
-// Create the Web3Modal instance
+// Create the Web3Modal instance immediately - this must happen synchronously
 createWeb3Modal({
   wagmiConfig: config,
   projectId,
