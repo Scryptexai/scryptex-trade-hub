@@ -1,6 +1,7 @@
 import { createConfig, http } from 'wagmi'
 import { sepolia, mainnet } from 'wagmi/chains'
 import { walletConnect, metaMask, injected } from 'wagmi/connectors'
+import { createWeb3Modal } from '@web3modal/wagmi/react'
 
 const projectId = 'ca311a834b6efe8ab62c0b04f32111cc' // Replace with your actual project ID
 
@@ -15,6 +16,14 @@ export const config = createConfig({
     [mainnet.id]: http(),
     [sepolia.id]: http(),
   },
+})
+
+// Create the Web3Modal instance
+createWeb3Modal({
+  wagmiConfig: config,
+  projectId,
+  enableAnalytics: true, // Optional - enables analytics
+  enableOnramp: true, // Optional - enables onramp
 })
 
 export interface Chain {
