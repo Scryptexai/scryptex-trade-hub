@@ -1,9 +1,10 @@
 
 import { useState } from "react";
-import { Gift, Trophy, Star, Clock, Users, Zap } from "lucide-react";
+import { Gift, Trophy, Star, Clock, Users, Zap, Bridge, ArrowLeftRight, Twitter, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
 
 const tasks = [
   {
@@ -13,6 +14,7 @@ const tasks = [
     points: 100,
     completed: true,
     icon: Gift,
+    action: null,
   },
   {
     id: 2,
@@ -20,7 +22,8 @@ const tasks = [
     description: "Execute any swap or trade on the platform",
     points: 250,
     completed: false,
-    icon: Zap,
+    icon: ArrowLeftRight,
+    action: "swap",
   },
   {
     id: 3,
@@ -29,6 +32,7 @@ const tasks = [
     points: 500,
     completed: false,
     icon: Star,
+    action: "create",
   },
   {
     id: 4,
@@ -37,14 +41,52 @@ const tasks = [
     points: 350,
     completed: false,
     icon: Users,
+    action: "gm",
   },
   {
     id: 5,
-    title: "Refer Friends",
-    description: "Invite 5 friends to join the platform",
+    title: "Bridge Assets",
+    description: "Transfer assets between different chains",
+    points: 300,
+    completed: false,
+    icon: Bridge,
+    action: "bridge",
+  },
+  {
+    id: 6,
+    title: "Follow on Twitter",
+    description: "Follow our official Twitter account",
+    points: 50,
+    completed: false,
+    icon: Twitter,
+    action: "twitter",
+  },
+  {
+    id: 7,
+    title: "Join Discord",
+    description: "Join our Discord community",
+    points: 50,
+    completed: false,
+    icon: MessageSquare,
+    action: "discord",
+  },
+  {
+    id: 8,
+    title: "Join Telegram",
+    description: "Join our Telegram channel",
+    points: 50,
+    completed: false,
+    icon: MessageSquare,
+    action: "telegram",
+  },
+  {
+    id: 9,
+    title: "Daily Check-in",
+    description: "Check in daily for 30 consecutive days",
     points: 1000,
     completed: false,
-    icon: Trophy,
+    icon: Clock,
+    action: "checkin",
   },
 ];
 
@@ -54,12 +96,77 @@ const userStats = {
   referrals: 0,
   level: 1,
   nextLevelPoints: 1000,
+  checkinStreak: 0,
+  lastCheckin: null as Date | null,
 };
 
 const Airdrop = () => {
-  const [selectedTab, setSelectedTab] = useState("tasks");
+  const navigate = useNavigate();
+  const [checkinStreak, setCheckinStreak] = useState(userStats.checkinStreak);
+  const [lastCheckin, setLastCheckin] = useState(userStats.lastCheckin);
 
   const progressPercentage = (userStats.totalPoints / userStats.nextLevelPoints) * 100;
+
+  const handleTaskAction = (action: string | null) => {
+    switch (action) {
+      case "swap":
+        navigate("/swap");
+        break;
+      case "create":
+        navigate("/create");
+        break;
+      case "gm":
+        navigate("/gm");
+        break;
+      case "bridge":
+        navigate("/bridge");
+        break;
+      case "twitter":
+        window.open("https://twitter.com/yourplatform", "_blank");
+        break;
+      case "discord":
+        window.open("https://discord.gg/yourplatform", "_blank");
+        break;
+      case "telegram":
+        window.open("https://t.me/yourplatform", "_blank");
+        break;
+      case "checkin":
+        handleDailyCheckin();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleDailyCheckin = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    if (lastCheckin) {
+      const lastCheckinDate = new Date(lastCheckin.getFullYear(), lastCheckin.getMonth(), lastCheckin.getDate());
+      const daysDiff = Math.floor((today.getTime() - lastCheckinDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === 1) {
+        setCheckinStreak(checkinStreak + 1);
+      } else if (daysDiff > 1) {
+        setCheckinStreak(1);
+      } else {
+        return; // Already checked in today
+      }
+    } else {
+      setCheckinStreak(1);
+    }
+    
+    setLastCheckin(now);
+  };
+
+  const canCheckinToday = () => {
+    if (!lastCheckin) return true;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const lastCheckinDate = new Date(lastCheckin.getFullYear(), lastCheckin.getMonth(), lastCheckin.getDate());
+    return today.getTime() > lastCheckinDate.getTime();
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -94,8 +201,8 @@ const Airdrop = () => {
           </Card>
           <Card className="trading-card">
             <CardContent className="pt-6 text-center">
-              <div className="text-2xl font-bold text-success">Level {userStats.level}</div>
-              <div className="text-text-secondary text-sm">Current Level</div>
+              <div className="text-2xl font-bold text-success">🔥 {checkinStreak}</div>
+              <div className="text-text-secondary text-sm">Check-in Streak</div>
             </CardContent>
           </Card>
         </div>
@@ -124,6 +231,9 @@ const Airdrop = () => {
           <CardContent className="space-y-4">
             {tasks.map((task) => {
               const Icon = task.icon;
+              const isCheckinTask = task.action === "checkin";
+              const canPerform = isCheckinTask ? canCheckinToday() : !task.completed;
+              
               return (
                 <div
                   key={task.id}
@@ -142,6 +252,11 @@ const Airdrop = () => {
                     <div>
                       <div className="font-medium text-text-primary">{task.title}</div>
                       <div className="text-text-secondary text-sm">{task.description}</div>
+                      {isCheckinTask && (
+                        <div className="text-xs text-warning mt-1">
+                          Current streak: {checkinStreak} days
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -152,10 +267,22 @@ const Airdrop = () => {
                     <Button
                       size="sm"
                       variant={task.completed ? "outline" : "default"}
-                      className={task.completed ? "bg-success/20 border-success text-success" : "button-primary"}
-                      disabled={task.completed}
+                      className={
+                        task.completed 
+                          ? "bg-success/20 border-success text-success" 
+                          : canPerform
+                          ? "button-primary"
+                          : "bg-bg-secondary text-text-muted"
+                      }
+                      disabled={!canPerform}
+                      onClick={() => task.action && handleTaskAction(task.action)}
                     >
-                      {task.completed ? "Completed" : "Start"}
+                      {task.completed 
+                        ? "Completed" 
+                        : isCheckinTask && !canCheckinToday()
+                        ? "Done Today"
+                        : "Start"
+                      }
                     </Button>
                   </div>
                 </div>
