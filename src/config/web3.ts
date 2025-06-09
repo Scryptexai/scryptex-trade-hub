@@ -2,7 +2,6 @@
 import { createConfig, http } from 'wagmi'
 import { sepolia, mainnet } from 'wagmi/chains'
 import { walletConnect, metaMask, injected } from 'wagmi/connectors'
-import { createWeb3Modal } from '@web3modal/wagmi/react'
 
 const projectId = 'ca311a834b6efe8ab62c0b04f32111cc' // Replace with your actual project ID
 
@@ -19,13 +18,22 @@ export const config = createConfig({
   },
 })
 
-// Create the Web3Modal instance immediately - this must happen synchronously
-createWeb3Modal({
-  wagmiConfig: config,
-  projectId,
-  enableAnalytics: true, // Optional - enables analytics
-  enableOnramp: true, // Optional - enables onramp
-})
+// Initialize Web3Modal lazily
+let web3Modal: any = null;
+
+export const initializeWeb3Modal = async () => {
+  if (typeof window !== 'undefined' && !web3Modal) {
+    const { createWeb3Modal } = await import('@web3modal/wagmi/react');
+    
+    web3Modal = createWeb3Modal({
+      wagmiConfig: config,
+      projectId,
+      enableAnalytics: true,
+      enableOnramp: true,
+    });
+  }
+  return web3Modal;
+};
 
 export interface Chain {
   id: number;
@@ -37,7 +45,7 @@ export interface Chain {
     symbol: string;
     decimals: number;
   };
-  iconUrl: string; // Added icon URL
+  iconUrl: string;
   testnet?: boolean;
 }
 

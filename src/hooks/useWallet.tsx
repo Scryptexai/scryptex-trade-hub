@@ -1,20 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { initializeWeb3Modal } from '@/config/web3';
 
 export const useWallet = () => {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
-  const { open, close } = useWeb3Modal();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [web3Modal, setWeb3Modal] = useState<any>(null);
 
-  // Legacy method untuk backward compatibility
+  useEffect(() => {
+    // Initialize Web3Modal when hook is first used
+    initializeWeb3Modal().then((modal) => {
+      setWeb3Modal(modal);
+    }).catch((error) => {
+      console.error('Failed to initialize Web3Modal in useWallet:', error);
+    });
+  }, []);
+
+  // Legacy method for backward compatibility
   const connectWallet = useCallback(async (connectorType?: 'metamask' | 'walletconnect' | 'injected') => {
     setIsConnecting(true);
     try {
       if (connectorType) {
-        // Jika specific connector diminta, cari dan connect
+        // If specific connector requested, find and connect
         const connector = connectors.find(c => {
           if (connectorType === 'metamask') return c.name.toLowerCase().includes('metamask');
           if (connectorType === 'walletconnect') return c.name.toLowerCase().includes('walletconnect');
@@ -26,18 +35,22 @@ export const useWallet = () => {
           connect({ connector });
         } else {
           // Fallback to Web3Modal
-          await open();
+          if (web3Modal) {
+            await web3Modal.open();
+          }
         }
       } else {
-        // Default: gunakan Web3Modal
-        await open();
+        // Default: use Web3Modal
+        if (web3Modal) {
+          await web3Modal.open();
+        }
       }
     } catch (error) {
       console.error('Failed to connect wallet:', error);
     } finally {
       setIsConnecting(false);
     }
-  }, [connect, connectors, open]);
+  }, [connect, connectors, web3Modal]);
 
   const disconnectWallet = useCallback(() => {
     disconnect();
@@ -49,15 +62,19 @@ export const useWallet = () => {
 
   // Web3Modal specific methods
   const openConnectModal = useCallback(async () => {
-    await open();
-  }, [open]);
+    if (web3Modal) {
+      await web3Modal.open();
+    }
+  }, [web3Modal]);
 
   const closeModal = useCallback(() => {
-    close();
-  }, [close]);
+    if (web3Modal) {
+      web3Modal.close();
+    }
+  }, [web3Modal]);
 
   return {
-    // Existing interface untuk backward compatibility
+    // Existing interface for backward compatibility
     address,
     isConnected,
     isConnecting: isConnecting || isPending,
@@ -69,6 +86,6 @@ export const useWallet = () => {
     // New Web3Modal methods
     openConnectModal,
     closeModal,
-    openModal: open,
+    openModal: web3Modal?.open,
   };
 };
