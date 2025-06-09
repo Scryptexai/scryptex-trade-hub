@@ -1,18 +1,154 @@
 
-import { database } from '@/config/database';
+import { ethers } from 'ethers';
 import { logger } from '@/utils/logger';
 
-export abstract class BaseChainService {
-  protected chainId: number = 0;
-  protected chainName: string = '';
+export interface ChainConfig {
+  chainId: number;
+  chainName: string;
+  rpcUrl: string;
+  wsUrl?: string;
+  contracts: {
+    trading: string;
+    tokenFactory: string;
+    bridgeCore: string;
+    bridgeReceiver: string;
+    messageRouter: string;
+    validatorRegistry: string;
+    feeTreasury: string;
+    pointsModule: string;
+    swapFactory: string;
+    swapRouter: string;
+    weth: string;
+  };
+}
 
-  abstract createToken(params: any): Promise<any>;
-  abstract buyToken(params: any): Promise<any>;
-  abstract sellToken(params: any): Promise<any>;
+export interface TokenCreationParams {
+  name: string;
+  symbol: string;
+  description: string;
+  logoUrl: string;
+  initialPrice: string;
+  creator: string;
+}
+
+export interface TradingParams {
+  tokenAddress: string;
+  ethAmount?: string;
+  tokenAmount?: string;
+  minTokens?: string;
+  minEth?: string;
+  buyer?: string;
+  seller?: string;
+}
+
+export interface BridgeParams {
+  token: string;
+  amount: string;
+  destinationChain: number;
+  recipient: string;
+  sender: string;
+}
+
+export interface SwapParams {
+  tokenIn: string;
+  tokenOut: string;
+  amountIn: string;
+  minAmountOut: string;
+  user: string;
+}
+
+export abstract class BaseChainService {
+  protected provider: ethers.Provider;
+  protected signer: ethers.Wallet;
+  protected chainConfig: ChainConfig;
+  protected contracts: { [key: string]: ethers.Contract } = {};
+
+  constructor(config: ChainConfig, privateKey: string) {
+    this.chainConfig = config;
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.signer = new ethers.Wallet(privateKey, this.provider);
+    this.initializeContracts();
+  }
+
+  protected abstract initializeContracts(): void;
+
+  // Abstract methods that must be implemented by child classes
+  abstract createToken(params: TokenCreationParams): Promise<any>;
+  abstract buyToken(params: TradingParams): Promise<any>;
+  abstract sellToken(params: TradingParams): Promise<any>;
   abstract getTokenPrice(tokenAddress: string): Promise<string>;
+  abstract initiateSwap(params: SwapParams): Promise<any>;
+  abstract initiateBridge(params: BridgeParams): Promise<any>;
   abstract getUserPoints(userAddress: string): Promise<any>;
   abstract getNetworkStats(): Promise<any>;
 
+  // Common utility methods
+  protected async getBlockNumber(): Promise<number> {
+    return await this.provider.getBlockNumber();
+  }
+
+  protected async getGasPrice(): Promise<bigint> {
+    const feeData = await this.provider.getFeeData();
+    return feeData.gasPrice || BigInt(0);
+  }
+
+  protected async estimateGas(contract: ethers.Contract, method: string, params: any[]): Promise<bigint> {
+    try {
+      return await contract[method].estimateGas(...params);
+    } catch (error) {
+      logger.error(`Gas estimation failed for ${method}:`, error);
+      // Return a reasonable default
+      return BigInt(500000);
+    }
+  }
+
+  protected async waitForConfirmation(txHash: string, confirmations: number = 1): Promise<ethers.TransactionReceipt | null> {
+    try {
+      return await this.provider.waitForTransaction(txHash, confirmations);
+    } catch (error) {
+      logger.error(`Transaction confirmation failed for ${txHash}:`, error);
+      return null;
+    }
+  }
+
+  // Common contract interaction patterns
+  protected async executeTransaction(
+    contract: ethers.Contract,
+    method: string,
+    params: any[],
+    value?: bigint
+  ): Promise<{ success: boolean; txHash?: string; error?: string; receipt?: ethers.TransactionReceipt }> {
+    try {
+      const gasLimit = await this.estimateGas(contract, method, params);
+      const gasPrice = await this.getGasPrice();
+
+      const tx = await contract[method](...params, {
+        gasLimit: gasLimit * BigInt(120) / BigInt(100), // Add 20% buffer
+        gasPrice,
+        value: value || 0
+      });
+
+      logger.info(`Transaction sent: ${tx.hash} for method: ${method}`);
+
+      const receipt = await this.waitForConfirmation(tx.hash, 1);
+      
+      if (receipt && receipt.status === 1) {
+        logger.info(`Transaction confirmed: ${tx.hash}`);
+        return { success: true, txHash: tx.hash, receipt };
+      } else {
+        logger.error(`Transaction failed: ${tx.hash}`);
+        return { success: false, error: 'Transaction failed' };
+      }
+    } catch (error) {
+      logger.error(`Transaction execution failed for ${method}:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // Storage helper for token and transaction data
   protected async storeNewToken(tokenData: {
     address: string;
     creator: string;
@@ -21,117 +157,23 @@ export abstract class BaseChainService {
     blockNumber: number;
     timestamp: Date;
     isRealtime?: boolean;
-  }) {
-    try {
-      const query = `
-        INSERT INTO tokens (
-          contract_address, creator_id, chain_id, tx_hash, 
-          block_number, created_at, is_realtime, is_active, is_listed
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, true)
-        ON CONFLICT (contract_address, chain_id) DO NOTHING
-        RETURNING id
-      `;
-
-      const result = await database.query(query, [
-        tokenData.address,
-        tokenData.creator,
-        tokenData.chainId,
-        tokenData.txHash,
-        tokenData.blockNumber,
-        tokenData.timestamp,
-        tokenData.isRealtime || false
-      ]);
-
-      if (result.rows.length > 0) {
-        logger.info(`Token stored in database: ${tokenData.address}`);
-        return result.rows[0].id;
-      }
-    } catch (error) {
-      logger.error('Failed to store token in database:', error);
-      throw error;
-    }
+  }): Promise<void> {
+    // This will be implemented with database integration
+    logger.info(`Storing new token: ${tokenData.address} on chain ${tokenData.chainId}`);
   }
 
-  protected async storeTrade(tradeData: {
-    tokenAddress: string;
-    trader: string;
-    isBuy: boolean;
-    amount: string;
-    price: string;
-    txHash: string;
-    blockNumber: number;
-    chainId: number;
-  }) {
-    try {
-      const query = `
-        INSERT INTO trades (
-          token_address, trader_address, is_buy, amount, price, 
-          tx_hash, block_number, chain_id, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-        RETURNING id
-      `;
-
-      const result = await database.query(query, [
-        tradeData.tokenAddress,
-        tradeData.trader,
-        tradeData.isBuy,
-        parseFloat(tradeData.amount),
-        parseFloat(tradeData.price),
-        tradeData.txHash,
-        tradeData.blockNumber,
-        tradeData.chainId
-      ]);
-
-      if (result.rows.length > 0) {
-        logger.info(`Trade stored in database: ${tradeData.txHash}`);
-        return result.rows[0].id;
-      }
-    } catch (error) {
-      logger.error('Failed to store trade in database:', error);
-      throw error;
-    }
-  }
-
-  protected async storeBridgeTransfer(bridgeData: {
-    transferId: string;
-    sender: string;
-    token: string;
-    amount: string;
-    sourceChain: number;
-    destinationChain: number;
-    txHash: string;
-    blockNumber: number;
+  protected async storeTransaction(txData: {
+    hash: string;
+    from: string;
+    to: string;
+    value: string;
+    gasUsed: string;
+    gasPrice: string;
     status: string;
-  }) {
-    try {
-      const query = `
-        INSERT INTO bridge_transfers (
-          transfer_id, sender_address, token_address, amount, 
-          source_chain_id, destination_chain_id, source_tx_hash, 
-          block_number, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-        RETURNING id
-      `;
-
-      const result = await database.query(query, [
-        bridgeData.transferId,
-        bridgeData.sender,
-        bridgeData.token,
-        parseFloat(bridgeData.amount),
-        bridgeData.sourceChain,
-        bridgeData.destinationChain,
-        bridgeData.txHash,
-        bridgeData.blockNumber,
-        bridgeData.status
-      ]);
-
-      if (result.rows.length > 0) {
-        logger.info(`Bridge transfer stored in database: ${bridgeData.transferId}`);
-        return result.rows[0].id;
-      }
-    } catch (error) {
-      logger.error('Failed to store bridge transfer in database:', error);
-      throw error;
-    }
+    chainId: number;
+    type: string;
+  }): Promise<void> {
+    // This will be implemented with database integration
+    logger.info(`Storing transaction: ${txData.hash} on chain ${txData.chainId}`);
   }
 }

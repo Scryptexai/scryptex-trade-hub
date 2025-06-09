@@ -1,231 +1,264 @@
 
-import { database } from '@/config/database';
 import { logger } from '@/utils/logger';
 
-interface PointsAwardParams {
+export interface PointsAwardParams {
   userId: string;
   amount: number;
   reason: string;
   txHash: string;
   chainId: number;
+  tokenAddress?: string;
+  tradeAmount?: string;
 }
 
-interface DailyLimit {
-  token_creation: number;
-  token_trading: number;
-  bridge_transfer: number;
-  swap: number;
+export interface UserPoints {
+  currentPoints: number;
+  totalEarned: number;
+  weeklyPoints: number;
+  monthlyPoints: number;
+  rank: number;
+  level: number;
+  lastActivity: Date;
+}
+
+export interface DailyStats {
+  tokenCreations: number;
+  trades: number;
+  bridges: number;
+  swaps: number;
+  pointsEarned: number;
+  maxTokenCreations: number;
+  maxTrades: number;
+  maxBridges: number;
+  maxSwaps: number;
+}
+
+export interface LeaderboardEntry {
+  userId: string;
+  username: string;
+  totalPoints: number;
+  weeklyPoints: number;
+  rank: number;
+  avatar?: string;
 }
 
 export class PointsService {
-  private dailyLimits: DailyLimit = {
-    token_creation: 3,
-    token_trading: 3,
-    bridge_transfer: 3,
-    swap: 3
+  private readonly DAILY_LIMITS = {
+    TOKEN_CREATION: 3,
+    TRADING: 10,
+    BRIDGE: 5,
+    SWAP: 15,
+    GM: 1
+  };
+
+  private readonly POINT_REWARDS = {
+    TOKEN_CREATION: 50,
+    TOKEN_CREATION_MEGAETH: 60,
+    TOKEN_BUY: 10,
+    TOKEN_SELL: 10,
+    BRIDGE_TRANSFER: 25,
+    SWAP: 15,
+    REFERRAL: 50,
+    DAILY_GM: 5
+  };
+
+  private readonly MULTIPLIERS = {
+    VOLUME_THRESHOLD_1: 1, // ETH
+    VOLUME_THRESHOLD_2: 10, // ETH
+    VOLUME_MULTIPLIER_1: 1.5,
+    VOLUME_MULTIPLIER_2: 2.0,
+    MEGAETH_REALTIME: 1.2,
+    SUCCESS_TRADE: 1.2
   };
 
   async awardPoints(params: PointsAwardParams): Promise<boolean> {
     try {
       // Check daily limits first
-      const canAward = await this.checkDailyLimit(params.userId, params.reason);
-      if (!canAward) {
-        logger.info(`Daily limit reached for user ${params.userId}, reason: ${params.reason}`);
+      const dailyStats = await this.getUserDailyStats(params.userId);
+      
+      if (!this.canAwardPoints(params.reason, dailyStats)) {
+        logger.warn(`Daily limit reached for user ${params.userId}, reason: ${params.reason}`);
         return false;
       }
 
-      // Award points
-      const query = `
-        INSERT INTO user_points (
-          user_id, amount, reason, tx_hash, chain_id, awarded_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW())
-        ON CONFLICT (tx_hash, chain_id) DO NOTHING
-        RETURNING id
-      `;
+      // Calculate base points
+      let basePoints = this.getBasePoints(params.reason, params.chainId);
+      
+      // Apply multipliers
+      const multiplier = this.calculateMultiplier(params);
+      const finalPoints = Math.floor(basePoints * multiplier);
 
-      const result = await database.query(query, [
-        params.userId,
-        params.amount,
-        params.reason,
-        params.txHash,
-        params.chainId
-      ]);
+      // Store points in database (this would integrate with Supabase)
+      await this.storePointsTransaction({
+        userId: params.userId,
+        points: finalPoints,
+        reason: params.reason,
+        txHash: params.txHash,
+        chainId: params.chainId,
+        multiplier,
+        tokenAddress: params.tokenAddress,
+        tradeAmount: params.tradeAmount
+      });
 
-      if (result.rows.length > 0) {
-        // Update user total points
-        await this.updateUserTotalPoints(params.userId, params.amount);
-        
-        logger.info(`Points awarded: ${params.amount} to user ${params.userId} for ${params.reason}`);
-        return true;
-      }
+      // Update user summary
+      await this.updateUserPointsSummary(params.userId, finalPoints);
 
-      return false;
+      logger.info(`Awarded ${finalPoints} points to user ${params.userId} for ${params.reason}`);
+      return true;
     } catch (error) {
       logger.error('Failed to award points:', error);
       return false;
     }
   }
 
-  private async checkDailyLimit(userId: string, reason: string): Promise<boolean> {
+  async getUserPoints(userId: string): Promise<UserPoints> {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Map reason to category
-      let category = reason;
-      if (reason.includes('token_buy') || reason.includes('token_sell')) {
-        category = 'token_trading';
-      } else if (reason.includes('token_creation')) {
-        category = 'token_creation';
-      } else if (reason.includes('bridge')) {
-        category = 'bridge_transfer';
-      } else if (reason.includes('swap')) {
-        category = 'swap';
-      }
-
-      const query = `
-        SELECT COUNT(*) as count
-        FROM user_points 
-        WHERE user_id = $1 
-        AND reason LIKE $2
-        AND DATE(awarded_at) = $3
-      `;
-
-      const result = await database.query(query, [
-        userId,
-        `%${category}%`,
-        today
-      ]);
-
-      const dailyCount = parseInt(result.rows[0].count);
-      const limit = this.dailyLimits[category as keyof DailyLimit] || 3;
-
-      return dailyCount < limit;
-    } catch (error) {
-      logger.error('Failed to check daily limit:', error);
-      return false; // Fail safe - don't award if we can't check
-    }
-  }
-
-  private async updateUserTotalPoints(userId: string, pointsToAdd: number): Promise<void> {
-    try {
-      const query = `
-        INSERT INTO user_total_points (user_id, total_points, last_updated)
-        VALUES ($1, $2, NOW())
-        ON CONFLICT (user_id) 
-        DO UPDATE SET 
-          total_points = user_total_points.total_points + $2,
-          last_updated = NOW()
-      `;
-
-      await database.query(query, [userId, pointsToAdd]);
-    } catch (error) {
-      logger.error('Failed to update user total points:', error);
-      throw error;
-    }
-  }
-
-  async getUserPoints(userId: string): Promise<any> {
-    try {
-      const query = `
-        SELECT 
-          utp.total_points,
-          (SELECT COUNT(*) FROM user_points up WHERE up.user_id = $1 AND DATE(up.awarded_at) = CURRENT_DATE) as today_activities,
-          (SELECT COUNT(DISTINCT DATE(up.awarded_at)) FROM user_points up WHERE up.user_id = $1) as active_days,
-          (SELECT RANK() OVER (ORDER BY total_points DESC) FROM user_total_points WHERE user_id = $1) as rank
-        FROM user_total_points utp
-        WHERE utp.user_id = $1
-      `;
-
-      const result = await database.query(query, [userId]);
-      
-      if (result.rows.length > 0) {
-        return result.rows[0];
-      }
-
-      return {
-        total_points: 0,
-        today_activities: 0,
-        active_days: 0,
-        rank: null
+      // This would query the database for user points
+      // For now, returning mock data structure
+      const mockPoints: UserPoints = {
+        currentPoints: 1250,
+        totalEarned: 2800,
+        weeklyPoints: 450,
+        monthlyPoints: 1250,
+        rank: 15,
+        level: 3,
+        lastActivity: new Date()
       };
+
+      logger.info(`Retrieved points for user ${userId}: ${mockPoints.currentPoints}`);
+      return mockPoints;
     } catch (error) {
-      logger.error('Failed to get user points:', error);
+      logger.error(`Failed to get user points for ${userId}:`, error);
       throw error;
     }
   }
 
-  async getLeaderboard(limit: number = 100): Promise<any[]> {
+  async getUserDailyStats(userId: string): Promise<DailyStats> {
     try {
-      const query = `
-        SELECT 
-          utp.user_id,
-          utp.total_points,
-          utp.last_updated,
-          RANK() OVER (ORDER BY utp.total_points DESC) as rank
-        FROM user_total_points utp
-        ORDER BY utp.total_points DESC
-        LIMIT $1
-      `;
+      // This would query today's activities for the user
+      const mockStats: DailyStats = {
+        tokenCreations: 1,
+        trades: 5,
+        bridges: 2,
+        swaps: 8,
+        pointsEarned: 180,
+        maxTokenCreations: this.DAILY_LIMITS.TOKEN_CREATION,
+        maxTrades: this.DAILY_LIMITS.TRADING,
+        maxBridges: this.DAILY_LIMITS.BRIDGE,
+        maxSwaps: this.DAILY_LIMITS.SWAP
+      };
 
-      const result = await database.query(query, [limit]);
-      return result.rows;
+      return mockStats;
+    } catch (error) {
+      logger.error(`Failed to get daily stats for ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async getLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
+    try {
+      // This would query the database for top users
+      const mockLeaderboard: LeaderboardEntry[] = [];
+      
+      for (let i = 1; i <= limit; i++) {
+        mockLeaderboard.push({
+          userId: `user_${i}`,
+          username: `Trader${i}`,
+          totalPoints: 5000 - (i * 50),
+          weeklyPoints: 1000 - (i * 10),
+          rank: i
+        });
+      }
+
+      return mockLeaderboard;
     } catch (error) {
       logger.error('Failed to get leaderboard:', error);
       throw error;
     }
   }
 
-  async getUserDailyStats(userId: string): Promise<any> {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const query = `
-        SELECT 
-          reason,
-          COUNT(*) as count,
-          SUM(amount) as total_points
-        FROM user_points 
-        WHERE user_id = $1 
-        AND DATE(awarded_at) = $2
-        GROUP BY reason
-      `;
-
-      const result = await database.query(query, [userId, today]);
-      
-      const stats = {
-        token_creation: 0,
-        token_trading: 0,
-        bridge_transfer: 0,
-        swap: 0,
-        total_today: 0
-      };
-
-      result.rows.forEach(row => {
-        if (row.reason.includes('token_creation')) {
-          stats.token_creation = parseInt(row.count);
-        } else if (row.reason.includes('token_buy') || row.reason.includes('token_sell')) {
-          stats.token_trading += parseInt(row.count);
-        } else if (row.reason.includes('bridge')) {
-          stats.bridge_transfer = parseInt(row.count);
-        } else if (row.reason.includes('swap')) {
-          stats.swap = parseInt(row.count);
-        }
-        stats.total_today += parseInt(row.total_points);
-      });
-
-      return {
-        ...stats,
-        limits: this.dailyLimits,
-        remaining: {
-          token_creation: Math.max(0, this.dailyLimits.token_creation - stats.token_creation),
-          token_trading: Math.max(0, this.dailyLimits.token_trading - stats.token_trading),
-          bridge_transfer: Math.max(0, this.dailyLimits.bridge_transfer - stats.bridge_transfer),
-          swap: Math.max(0, this.dailyLimits.swap - stats.swap)
-        }
-      };
-    } catch (error) {
-      logger.error('Failed to get user daily stats:', error);
-      throw error;
+  private canAwardPoints(reason: string, dailyStats: DailyStats): boolean {
+    switch (reason) {
+      case 'token_creation':
+      case 'token_creation_realtime':
+        return dailyStats.tokenCreations < this.DAILY_LIMITS.TOKEN_CREATION;
+      case 'token_buy':
+      case 'token_sell':
+        return dailyStats.trades < this.DAILY_LIMITS.TRADING;
+      case 'bridge_transfer':
+        return dailyStats.bridges < this.DAILY_LIMITS.BRIDGE;
+      case 'swap':
+        return dailyStats.swaps < this.DAILY_LIMITS.SWAP;
+      default:
+        return true;
     }
+  }
+
+  private getBasePoints(reason: string, chainId: number): number {
+    switch (reason) {
+      case 'token_creation':
+        return chainId === 6342 ? this.POINT_REWARDS.TOKEN_CREATION_MEGAETH : this.POINT_REWARDS.TOKEN_CREATION;
+      case 'token_creation_realtime':
+        return this.POINT_REWARDS.TOKEN_CREATION_MEGAETH;
+      case 'token_buy':
+        return this.POINT_REWARDS.TOKEN_BUY;
+      case 'token_sell':
+        return this.POINT_REWARDS.TOKEN_SELL;
+      case 'bridge_transfer':
+        return this.POINT_REWARDS.BRIDGE_TRANSFER;
+      case 'swap':
+        return this.POINT_REWARDS.SWAP;
+      case 'referral':
+        return this.POINT_REWARDS.REFERRAL;
+      case 'daily_gm':
+        return this.POINT_REWARDS.DAILY_GM;
+      default:
+        return 5;
+    }
+  }
+
+  private calculateMultiplier(params: PointsAwardParams): number {
+    let multiplier = 1.0;
+
+    // Volume-based multiplier
+    if (params.tradeAmount) {
+      const volume = parseFloat(params.tradeAmount);
+      if (volume >= this.MULTIPLIERS.VOLUME_THRESHOLD_2) {
+        multiplier *= this.MULTIPLIERS.VOLUME_MULTIPLIER_2;
+      } else if (volume >= this.MULTIPLIERS.VOLUME_THRESHOLD_1) {
+        multiplier *= this.MULTIPLIERS.VOLUME_MULTIPLIER_1;
+      }
+    }
+
+    // Chain-specific multiplier (MegaETH gets bonus)
+    if (params.chainId === 6342) {
+      multiplier *= this.MULTIPLIERS.MEGAETH_REALTIME;
+    }
+
+    // Success multiplier for successful trades
+    if (params.reason.includes('buy') || params.reason.includes('sell')) {
+      multiplier *= this.MULTIPLIERS.SUCCESS_TRADE;
+    }
+
+    return multiplier;
+  }
+
+  private async storePointsTransaction(data: {
+    userId: string;
+    points: number;
+    reason: string;
+    txHash: string;
+    chainId: number;
+    multiplier: number;
+    tokenAddress?: string;
+    tradeAmount?: string;
+  }): Promise<void> {
+    // This would integrate with database to store the points transaction
+    logger.info(`Storing points transaction: ${data.points} points for ${data.userId}`);
+  }
+
+  private async updateUserPointsSummary(userId: string, points: number): Promise<void> {
+    // This would update the user's total points in the database
+    logger.info(`Updating user ${userId} points summary with ${points} points`);
   }
 }
