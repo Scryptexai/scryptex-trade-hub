@@ -30,6 +30,36 @@ export class CustomError extends Error {
   }
 }
 
+// Generate JWT tokens
+export function generateTokens(userId: string, walletAddress: string) {
+  const accessToken = jwt.sign(
+    { userId, walletAddress },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiresIn }
+  );
+
+  const refreshToken = jwt.sign(
+    { userId, walletAddress },
+    config.refreshTokenSecret,
+    { expiresIn: config.refreshTokenExpiresIn }
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: config.jwtExpiresIn
+  };
+}
+
+// Verify refresh token
+export function verifyRefreshToken(token: string): JWTPayload {
+  try {
+    return jwt.verify(token, config.refreshTokenSecret) as JWTPayload;
+  } catch (error) {
+    throw new CustomError('Invalid refresh token', 401);
+  }
+}
+
 export const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;

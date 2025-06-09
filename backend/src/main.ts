@@ -5,8 +5,12 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
+import { database } from '@/config/database';
+import { redis } from '@/config/redis';
 import { errorHandler } from '@/middleware/errorHandler';
 import { rateLimiter } from '@/middleware/rateLimiter';
+import { requestLoggingMiddleware, errorLoggingMiddleware } from '@/middleware/logging';
+import { corsMiddleware } from '@/middleware/cors';
 
 // Import chain-specific routes
 import riseChainRoutes from '@/routes/chains/risechain/risechain.routes';
@@ -18,6 +22,7 @@ import healthRoutes from '@/routes/health';
 // Import services for initialization
 import { RiseChainService } from '@/services/chains/risechain/RiseChainService';
 import { MegaETHService } from '@/services/chains/megaeth/MegaETHService';
+import { initializeQueues } from '@/services/queue/queueManager';
 
 const app = express();
 
@@ -32,12 +37,10 @@ if (config.compressionEnabled) {
 }
 
 // CORS configuration
-app.use(cors({
-  origin: config.corsOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(corsMiddleware);
+
+// Request logging
+app.use(requestLoggingMiddleware);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -71,20 +74,53 @@ app.use('/api/v1/status', (req, res) => {
   });
 });
 
-// Error handling middleware (must be last)
+// Error handling middleware
+app.use(errorLoggingMiddleware);
 app.use(errorHandler);
 
-// Initialize blockchain services
+// Initialize all services
 async function initializeServices() {
   try {
-    logger.info('Initializing blockchain services...');
+    logger.info('Initializing core services...');
     
+    // Initialize database connection
+    await database.connect();
+    logger.info('✅ Database connected');
+    
+    // Initialize Redis connection
+    // Redis connection is established in constructor, just verify it's working
+    await redis.set('startup', 'true', 10);
+    await redis.get('startup');
+    logger.info('✅ Redis connected');
+    
+    // Initialize queue system
+    await initializeQueues();
+    logger.info('✅ Queue system initialized');
+    
+    // Initialize blockchain services
+    logger.info('Initializing blockchain services...');
     const riseChainService = new RiseChainService();
     const megaETHService = new MegaETHService();
+    logger.info('✅ Blockchain services initialized');
     
-    logger.info('All blockchain services initialized successfully');
+    logger.info('🚀 All services initialized successfully');
   } catch (error) {
-    logger.error('Failed to initialize blockchain services:', error);
+    logger.error('❌ Failed to initialize services:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown handler
+async function gracefulShutdown() {
+  logger.info('Shutting down gracefully...');
+  
+  try {
+    await database.close();
+    await redis.close();
+    logger.info('All connections closed');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
     process.exit(1);
   }
 }
@@ -96,27 +132,15 @@ async function startServer() {
     
     const server = app.listen(config.port, () => {
       logger.info(`🚀 Scryptex Multi-Chain DEX API server running on port ${config.port}`);
-      logger.info(`📝 API Documentation: http://localhost:${config.port}/health`);
+      logger.info(`📝 Health Check: http://localhost:${config.port}/health`);
       logger.info(`🔗 Supported Chains: RiseChain (${config.risechain.chainId}), MegaETH (${config.megaeth.chainId})`);
       logger.info(`🌐 Environment: ${config.nodeEnv}`);
+      logger.info(`📊 Features: Trading, Bridge, Points, Real-time (MegaETH)`);
     });
 
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received, shutting down gracefully');
-      server.close(() => {
-        logger.info('Server closed');
-        process.exit(0);
-      });
-    });
-
-    process.on('SIGINT', () => {
-      logger.info('SIGINT received, shutting down gracefully');
-      server.close(() => {
-        logger.info('Server closed');
-        process.exit(0);
-      });
-    });
+    // Graceful shutdown handlers
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
 
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -124,7 +148,7 @@ async function startServer() {
   }
 }
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions and rejections
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   process.exit(1);

@@ -1,102 +1,121 @@
 
-import Redis from 'redis';
+import Redis from 'ioredis';
 import { config } from './environment';
 import { logger } from '@/utils/logger';
 
-class RedisService {
-  private client: Redis.RedisClientType;
-  private isConnected = false;
+class RedisConnection {
+  private client: Redis;
+  private isConnected: boolean = false;
 
   constructor() {
-    this.client = Redis.createClient({
-      url: config.redisUrl,
-      retry_delay_on_failure_ms: 100,
-      retry_unfulfilled_commands: true,
-    });
-
-    this.client.on('error', (err) => {
-      logger.error('Redis Client Error:', err);
-      this.isConnected = false;
+    this.client = new Redis(config.redisUrl, {
+      retryDelayOnFailover: 100,
+      enableReadyCheck: false,
+      maxRetriesPerRequest: null,
     });
 
     this.client.on('connect', () => {
-      logger.info('Redis client connected');
       this.isConnected = true;
+      logger.info('Redis connected successfully');
     });
 
-    this.client.on('ready', () => {
-      logger.info('Redis client ready');
-    });
-
-    this.client.on('end', () => {
-      logger.info('Redis client disconnected');
+    this.client.on('error', (error) => {
       this.isConnected = false;
+      logger.error('Redis connection error:', error);
+    });
+
+    this.client.on('close', () => {
+      this.isConnected = false;
+      logger.warn('Redis connection closed');
     });
   }
 
-  async connect(): Promise<void> {
-    if (!this.isConnected) {
-      await this.client.connect();
-    }
-  }
-
-  async disconnect(): Promise<void> {
-    if (this.isConnected) {
-      await this.client.disconnect();
-    }
-  }
-
-  getClient(): Redis.RedisClientType {
-    return this.client;
-  }
-
-  async set(key: string, value: string, ttl?: number): Promise<void> {
-    if (ttl) {
-      await this.client.setEx(key, ttl, value);
-    } else {
-      await this.client.set(key, value);
+  async set(key: string, value: string | number | object, ttlSeconds?: number): Promise<void> {
+    try {
+      const serializedValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      
+      if (ttlSeconds) {
+        await this.client.setex(key, ttlSeconds, serializedValue);
+      } else {
+        await this.client.set(key, serializedValue);
+      }
+      
+      logger.debug(`Redis SET: ${key}`);
+    } catch (error) {
+      logger.error('Redis SET error:', error);
+      throw error;
     }
   }
 
   async get(key: string): Promise<string | null> {
-    return await this.client.get(key);
+    try {
+      const result = await this.client.get(key);
+      logger.debug(`Redis GET: ${key}`);
+      return result;
+    } catch (error) {
+      logger.error('Redis GET error:', error);
+      throw error;
+    }
   }
 
-  async del(key: string): Promise<number> {
-    return await this.client.del(key);
+  async getObject(key: string): Promise<any | null> {
+    try {
+      const result = await this.client.get(key);
+      if (!result) return null;
+      return JSON.parse(result);
+    } catch (error) {
+      logger.error('Redis GET object error:', error);
+      return null;
+    }
   }
 
-  async hSet(key: string, field: string, value: string): Promise<number> {
-    return await this.client.hSet(key, field, value);
+  async del(key: string): Promise<void> {
+    try {
+      await this.client.del(key);
+      logger.debug(`Redis DEL: ${key}`);
+    } catch (error) {
+      logger.error('Redis DEL error:', error);
+      throw error;
+    }
   }
 
-  async hGet(key: string, field: string): Promise<string | undefined> {
-    return await this.client.hGet(key, field);
+  async exists(key: string): Promise<boolean> {
+    try {
+      const result = await this.client.exists(key);
+      return result === 1;
+    } catch (error) {
+      logger.error('Redis EXISTS error:', error);
+      return false;
+    }
   }
 
-  async hGetAll(key: string): Promise<Record<string, string>> {
-    return await this.client.hGetAll(key);
+  async incr(key: string): Promise<number> {
+    try {
+      return await this.client.incr(key);
+    } catch (error) {
+      logger.error('Redis INCR error:', error);
+      throw error;
+    }
   }
 
-  async expire(key: string, seconds: number): Promise<boolean> {
-    return await this.client.expire(key, seconds);
+  async expire(key: string, seconds: number): Promise<void> {
+    try {
+      await this.client.expire(key, seconds);
+    } catch (error) {
+      logger.error('Redis EXPIRE error:', error);
+      throw error;
+    }
   }
 
-  get connected(): boolean {
+  isHealthy(): boolean {
     return this.isConnected;
   }
-}
 
-export const redis = new RedisService();
-
-export async function initializeRedis(): Promise<void> {
-  try {
-    await redis.connect();
-    logger.info('Redis connection established successfully');
-  } catch (error) {
-    logger.error('Failed to connect to Redis:', error);
-    throw error;
+  async close(): Promise<void> {
+    await this.client.quit();
+    this.isConnected = false;
+    logger.info('Redis connection closed');
   }
 }
 
-export default redis;
+export const redis = new RedisConnection();

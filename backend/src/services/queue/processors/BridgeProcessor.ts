@@ -1,51 +1,38 @@
-
 import { Job } from 'bull';
 import { logger } from '@/utils/logger';
 import { database } from '@/config/database';
-import { blockchainService } from '@/services/blockchain.service';
 
 export class BridgeProcessor {
   static async processBridge(job: Job): Promise<void> {
     const { requestId, transferData } = job.data;
     
     try {
-      logger.info(`Processing bridge request ${requestId}`);
+      logger.info(`Processing bridge request: ${requestId}`);
       
-      // Update status to processing
-      await database.query(
-        'UPDATE bridge_requests SET status = $1 WHERE id = $2',
-        ['processing', requestId]
-      );
+      // In a real implementation, this would:
+      // 1. Monitor source chain for deposit confirmation
+      // 2. Validate transfer parameters
+      // 3. Initiate transfer on destination chain
+      // 4. Monitor destination chain for completion
+      // 5. Update database with final status
       
-      // Simulate bridge processing
-      const success = Math.random() > 0.1; // 90% success rate
+      // Mock implementation
+      await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
       
-      if (success) {
-        const mockDestinationTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-        
-        await database.query(
-          'UPDATE bridge_requests SET status = $1, destination_tx_hash = $2, completed_at = NOW() WHERE id = $3',
-          ['completed', mockDestinationTxHash, requestId]
-        );
-        
-        logger.info(`Bridge request ${requestId} completed successfully`);
-      } else {
-        await database.query(
-          'UPDATE bridge_requests SET status = $1 WHERE id = $2',
-          ['failed', requestId]
-        );
-        
-        throw new Error('Bridge processing failed');
-      }
+      // Update bridge request status
+      const query = `
+        UPDATE bridge_requests 
+        SET status = 'completed', completed_at = NOW() 
+        WHERE id = $1
+      `;
+      
+      await database.query(query, [requestId]);
+      
+      await job.progress(100);
+      
+      logger.info(`Bridge processing completed: ${requestId}`);
     } catch (error) {
-      logger.error(`Failed to process bridge request ${requestId}:`, error);
-      
-      // Update status to failed
-      await database.query(
-        'UPDATE bridge_requests SET status = $1 WHERE id = $2',
-        ['failed', requestId]
-      );
-      
+      logger.error(`Bridge processing failed: ${requestId}`, error);
       throw error;
     }
   }
