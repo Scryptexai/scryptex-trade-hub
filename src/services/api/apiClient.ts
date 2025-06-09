@@ -1,5 +1,4 @@
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { config } from '@/config/environment';
 
 interface ApiResponse<T = any> {
@@ -9,66 +8,57 @@ interface ApiResponse<T = any> {
   error?: string;
 }
 
+interface RequestConfig {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  headers?: Record<string, string>;
+  body?: any;
+}
+
 class ApiClient {
-  private instance: AxiosInstance;
+  private baseURL: string;
   private wsConnection: WebSocket | null = null;
   private wsReconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private wsListeners: Map<string, Set<(data: any) => void>> = new Map();
 
   constructor() {
-    this.instance = axios.create({
-      baseURL: config.apiUrl,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.setupInterceptors();
+    this.baseURL = config.apiUrl;
     this.initializeWebSocket();
   }
 
-  private setupInterceptors() {
-    // Request interceptor
-    this.instance.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        if (config.development?.debugMode) {
-          console.log('API Request:', config);
-        }
-        
-        return config;
-      },
-      (error) => {
-        console.error('Request Error:', error);
-        return Promise.reject(error);
-      }
-    );
+  private async request<T = any>(url: string, config: RequestConfig): Promise<ApiResponse<T>> {
+    const token = localStorage.getItem('authToken');
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...config.headers,
+    };
 
-    // Response interceptor
-    this.instance.interceptors.response.use(
-      (response: AxiosResponse<ApiResponse>) => {
-        if (config.development.debugMode) {
-          console.log('API Response:', response);
-        }
-        return response;
-      },
-      (error) => {
-        console.error('Response Error:', error);
-        
-        if (error.response?.status === 401) {
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(`${this.baseURL}${url}`, {
+        method: config.method,
+        headers,
+        body: config.body ? JSON.stringify(config.body) : undefined,
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
           localStorage.removeItem('authToken');
           window.location.href = '/auth';
         }
-        
-        return Promise.reject(error);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    );
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
+    }
   }
 
   private initializeWebSocket() {
@@ -141,24 +131,20 @@ class ApiClient {
   }
 
   // HTTP API methods
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.get<ApiResponse<T>>(url, config);
-    return response.data;
+  async get<T = any>(url: string, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.request<T>(url, { method: 'GET', headers });
   }
 
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.post<ApiResponse<T>>(url, data, config);
-    return response.data;
+  async post<T = any>(url: string, data?: any, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.request<T>(url, { method: 'POST', body: data, headers });
   }
 
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.put<ApiResponse<T>>(url, data, config);
-    return response.data;
+  async put<T = any>(url: string, data?: any, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.request<T>(url, { method: 'PUT', body: data, headers });
   }
 
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.delete<ApiResponse<T>>(url, config);
-    return response.data;
+  async delete<T = any>(url: string, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.request<T>(url, { method: 'DELETE', headers });
   }
 
   // Blockchain specific methods
